@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/games")
 public class GameController {
@@ -28,10 +30,14 @@ public class GameController {
     }
 
     @PostMapping("/{roomCode}/move")
-    public ResponseEntity<Void> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
-        gameService.placeMove(roomCode, requestBody);
+    public ResponseEntity<Map<String, String>> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
+        boolean placed = gameService.placeMove(roomCode, requestBody);
 
-        return ResponseEntity.noContent().build();
+        if (!placed) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Failed to place move."));
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Move placed successfully."));
     }
 
     @PostMapping("/{roomCode}/restart")
