@@ -1,4 +1,4 @@
-package com.svi.tictactoe.exception;
+package com.svi.tictactoe.exception.handler;
 
 import com.svi.tictactoe.constants.Symbol;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -15,16 +15,6 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex) {
-        return ResponseEntity
-                .status(ex.getStatus())
-                .body(Map.of(
-                        "status", ex.getStatus().value(),
-                        "message", ex.getMessage()
-                ));
-    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
