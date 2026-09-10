@@ -32,7 +32,7 @@ public class Board {
     }
 
     public boolean isEmpty(int x, int y) {
-        return board[y][x] == null;
+        return board[x][y] == null;
     }
 
     private boolean isValidPosition(int x, int y) {
