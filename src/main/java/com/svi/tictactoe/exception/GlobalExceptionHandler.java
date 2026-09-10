@@ -16,14 +16,14 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(GameNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleGameNotFound(GameNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", ex.getMessage()));
-    }
-
-    @ExceptionHandler(PositionAlreadyTakenException.class)
-    public ResponseEntity<Map<String, String>> handlePositionAlreadyTaken(PositionAlreadyTakenException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", ex.getMessage()));
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex) {
+        return ResponseEntity
+                .status(ex.getStatus())
+                .body(Map.of(
+                        "status", ex.getStatus().value(),
+                        "message", ex.getMessage()
+                ));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

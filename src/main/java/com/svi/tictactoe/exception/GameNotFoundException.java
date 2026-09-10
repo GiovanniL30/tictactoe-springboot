@@ -1,9 +1,11 @@
 package com.svi.tictactoe.exception;
 
-public class GameNotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class GameNotFoundException extends ApiException {
 
     public GameNotFoundException(String message) {
-        super(message);
+        super(message, HttpStatus.NOT_FOUND);
     }
 
 }

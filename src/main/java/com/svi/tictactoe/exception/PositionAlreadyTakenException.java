@@ -1,9 +1,11 @@
 package com.svi.tictactoe.exception;
 
-public class PositionAlreadyTakenException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class PositionAlreadyTakenException extends ApiException {
 
     public PositionAlreadyTakenException(String message) {
-        super(message);
+        super(message, HttpStatus.CONFLICT);
     }
 
 }
