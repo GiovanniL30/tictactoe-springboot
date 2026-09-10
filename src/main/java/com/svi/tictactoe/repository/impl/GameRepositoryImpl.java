@@ -28,7 +28,7 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
-    public boolean placeMove(String roomCode, int x, int y, Symbol symbol) {
+    public Optional<Symbol[][]> placeMove(String roomCode, int x, int y, Symbol symbol) {
         Optional<Game> gameOptional = findGame(roomCode);
 
         if (gameOptional.isEmpty()) {
@@ -37,7 +37,11 @@ public class GameRepositoryImpl implements GameRepository {
 
         Game game = gameOptional.get();
 
-        return game.placeMove(symbol, x, y);
+        if (!game.placeMove(symbol, x, y)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(game.getBoard().getGrid());
     }
 
     @Override

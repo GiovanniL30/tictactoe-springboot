@@ -8,7 +8,7 @@ import java.util.Optional;
 public interface GameRepository {
 
     String createGame();
-    boolean placeMove(String roomCode, int x, int y, Symbol symbol);
+    Optional<Symbol[][]> placeMove(String roomCode, int x, int y, Symbol symbol);
     Optional<Game> findGame(String roomCode);
 
 }

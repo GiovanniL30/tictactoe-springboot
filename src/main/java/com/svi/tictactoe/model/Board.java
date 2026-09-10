@@ -6,33 +6,33 @@ public class Board {
 
     private static final int SIZE = 3;
 
-    private final Symbol[][] board;
+    private final Symbol[][] grid;
 
     public Board() {
-        this.board = new Symbol[SIZE][SIZE];
+        this.grid = new Symbol[SIZE][SIZE];
     }
 
     public boolean placeSymbol(Symbol symbol, int x, int y) {
-        if (!isValidPosition(x, y) || board[x][y] != null) {
+        if (!isValidPosition(x, y) || grid[x][y] != null) {
             return false;
         }
 
-        board[x][y] = symbol;
+        grid[x][y] = symbol;
         return true;
     }
 
-    public Symbol[][] getBoard() {
+    public Symbol[][] getGrid() {
         Symbol[][] copy = new Symbol[SIZE][SIZE];
 
         for (int i = 0; i < SIZE; i++) {
-            copy[i] = board[i].clone();
+            copy[i] = grid[i].clone();
         }
 
         return copy;
     }
 
     public boolean isEmpty(int x, int y) {
-        return board[x][y] == null;
+        return grid[x][y] == null;
     }
 
     private boolean isValidPosition(int x, int y) {

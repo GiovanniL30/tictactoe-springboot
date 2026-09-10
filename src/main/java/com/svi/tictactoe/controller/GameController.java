@@ -2,14 +2,16 @@ package com.svi.tictactoe.controller;
 
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
+import com.svi.tictactoe.dto.response.AddMoveResponse;
 import com.svi.tictactoe.dto.response.CreateGameResponse;
+import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.service.GameService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/games")
@@ -30,14 +32,12 @@ public class GameController {
     }
 
     @PostMapping("/{roomCode}/move")
-    public ResponseEntity<Map<String, String>> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
-        boolean placed = gameService.placeMove(roomCode, requestBody);
+    public ResponseEntity<AddMoveResponse> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
+        Optional<Symbol[][]> updatedGrid = gameService.placeMove(roomCode, requestBody);
 
-        if (!placed) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Failed to place move."));
-        }
-
-        return ResponseEntity.ok(Map.of("message", "Move placed successfully."));
+        return updatedGrid
+                .map(symbols -> ResponseEntity.ok(new AddMoveResponse("Move placed successfully.", symbols)))
+                .orElseGet(() -> ResponseEntity.badRequest().body(new AddMoveResponse("Failed to place move.", null)));
     }
 
     @PostMapping("/{roomCode}/restart")
