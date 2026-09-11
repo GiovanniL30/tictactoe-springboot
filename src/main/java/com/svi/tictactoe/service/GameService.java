@@ -24,4 +24,6 @@ public interface GameService {
 
     Game getGame(String roomCode);
 
+    Game deleteGame(String roomCode);
+
 }

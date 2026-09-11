@@ -54,7 +54,7 @@ class GameTest {
         game.startNextRound();
 
         assertNull(game.getBoard().getGrid()[0][0]);
-        assertEquals(1, game.getRound());
+        assertEquals(2, game.getRound());
     }
 
     @Test

@@ -95,8 +95,17 @@ public class GameController {
 
 
     @DeleteMapping("/{roomCode}")
-    public ResponseEntity<String> deleteRoom(@PathVariable String roomCode) {
-        return null;
+    public ResponseEntity<GameStatusResponse> deleteRoom(@PathVariable String roomCode) {
+        Game game = gameService.deleteGame(roomCode);
+
+        return ResponseEntity.ok(new GameStatusResponse(
+                game.getBoard().getGrid(),
+                game.getPlayers(),
+                game.getRoomCode(),
+                game.getRound(),
+                game.getSpectators().size(),
+                "Game deleted successfully."
+        ));
     }
 
 }
