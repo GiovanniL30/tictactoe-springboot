@@ -72,7 +72,7 @@ public class GameController {
         return ResponseEntity.ok(new JoinGameResponse(message, participant));
     }
 
-    @GetMapping("/{roomCode}/status")
+    @GetMapping("/{roomCode}")
     public ResponseEntity<GameStatusResponse> checkGameStatus(@PathVariable String roomCode) {
         Game game = gameService.getGame(roomCode);
 
