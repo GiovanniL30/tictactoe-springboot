@@ -4,6 +4,7 @@ import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.exception.GameNotStartedException;
+import com.svi.tictactoe.exception.InvalidTurnException;
 import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import com.svi.tictactoe.exception.PositionAlreadyTakenException;
 
@@ -20,6 +21,7 @@ public class Game {
     private final List<Player> spectators;
     private final Board board;
     private int round;
+    private Symbol currentTurn;
 
     public Game(String roomCode, List<Player> players, Board board) {
         this.roomCode = roomCode;
@@ -27,14 +29,29 @@ public class Game {
         this.spectators = new ArrayList<>();
         this.board = board;
         this.round = 1;
+        this.currentTurn = Symbol.X;
     }
 
     public synchronized boolean placeMove(Symbol symbol, int x, int y) {
+        if (!isStarted()) {
+            throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
+        }
+
+        if (symbol != currentTurn) {
+            throw new InvalidTurnException(ErrorMessage.INVALID_TURN.format(currentTurn));
+        }
+
         if (!board.isEmpty(x, y)) {
             throw new PositionAlreadyTakenException(ErrorMessage.POSITION_ALREADY_TAKEN.format(x, y));
         }
 
-        return board.placeSymbol(symbol, x, y);
+        boolean placed = board.placeSymbol(symbol, x, y);
+
+        if (placed) {
+            currentTurn = currentTurn == Symbol.X ? Symbol.O : Symbol.X;
+        }
+
+        return placed;
     }
 
     public synchronized void startNextRound() {
@@ -44,6 +61,7 @@ public class Game {
 
         board.reset();
         round++;
+        currentTurn = Symbol.X;
     }
 
     public synchronized Player join(String playerName) {
@@ -69,6 +87,10 @@ public class Game {
 
     public int getRound() {
         return round;
+    }
+
+    public Symbol getCurrentTurn() {
+        return currentTurn;
     }
 
     public String getRoomCode() {

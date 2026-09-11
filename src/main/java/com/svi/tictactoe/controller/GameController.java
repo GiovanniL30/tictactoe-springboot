@@ -8,7 +8,6 @@ import com.svi.tictactoe.dto.response.CreateGameResponse;
 import com.svi.tictactoe.dto.response.GameStatusResponse;
 import com.svi.tictactoe.dto.response.JoinGameResponse;
 import com.svi.tictactoe.dto.response.PlayAgainResponse;
-import com.svi.tictactoe.model.Board;
 import com.svi.tictactoe.model.Game;
 import com.svi.tictactoe.model.Player;
 import com.svi.tictactoe.constants.PlayerType;
@@ -44,11 +43,17 @@ public class GameController {
 
     @PostMapping("/{roomCode}/move")
     public ResponseEntity<BoardResponse> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
-        Optional<Board> updatedBoard = gameService.placeMove(roomCode, requestBody);
+        Optional<Game> updatedGame = gameService.placeMove(roomCode, requestBody);
 
-        return updatedBoard
-                .map(board -> ResponseEntity.ok(new BoardResponse("Move placed successfully.", board.getGrid())))
-                .orElseGet(() -> ResponseEntity.badRequest().body(new BoardResponse("Failed to place move.", null)));
+        return updatedGame
+                .map(game -> ResponseEntity.ok(new BoardResponse(
+                        "Move placed successfully.",
+                        game.getBoard().getGrid(),
+                        game.getCurrentTurn()
+                )))
+                .orElseGet(() -> ResponseEntity.badRequest().body(
+                        new BoardResponse("Failed to place move.", null, null)
+                ));
     }
 
     @PostMapping("/{roomCode}/play-again")
@@ -58,6 +63,7 @@ public class GameController {
         return ResponseEntity.ok(new PlayAgainResponse(
                 "New round started.",
                 game.getRound(),
+                game.getCurrentTurn(),
                 game.getPlayers()
         ));
     }
@@ -81,6 +87,7 @@ public class GameController {
                 game.getPlayers(),
                 game.getRoomCode(),
                 game.getRound(),
+                game.getCurrentTurn(),
                 game.getSpectators().size(),
                 "Game status retrieved successfully."
         ));
@@ -88,9 +95,13 @@ public class GameController {
 
     @GetMapping("/{roomCode}/board")
     public ResponseEntity<BoardResponse> checkBoardStatus(@PathVariable String roomCode) {
-        Board board = gameService.getBoard(roomCode);
+        Game game = gameService.getGame(roomCode);
 
-        return ResponseEntity.ok(new BoardResponse("Latest Board Grid", board.getGrid()));
+        return ResponseEntity.ok(new BoardResponse(
+                "Latest Board Grid",
+                game.getBoard().getGrid(),
+                game.getCurrentTurn()
+        ));
     }
 
 
@@ -103,6 +114,7 @@ public class GameController {
                 game.getPlayers(),
                 game.getRoomCode(),
                 game.getRound(),
+                game.getCurrentTurn(),
                 game.getSpectators().size(),
                 "Game deleted successfully."
         ));

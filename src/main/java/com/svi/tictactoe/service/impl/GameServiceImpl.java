@@ -34,7 +34,7 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public Optional<Board> placeMove(String roomCode, AddMoveRequest requestBody) {
+    public Optional<Game> placeMove(String roomCode, AddMoveRequest requestBody) {
         Game game = requireGame(roomCode);
 
         if (!game.placeMove(requestBody.getSymbol(), requestBody.getX(), requestBody.getY())) {
@@ -42,7 +42,7 @@ public class GameServiceImpl implements GameService {
         }
 
         gameRepository.save(game);
-        return Optional.of(game.getBoard());
+        return Optional.of(game);
     }
 
     @Override
@@ -59,11 +59,6 @@ public class GameServiceImpl implements GameService {
         Player participant = game.join(requestBody.getPlayerName());
         gameRepository.save(game);
         return participant;
-    }
-
-    @Override
-    public Board getBoard(String roomCode) {
-        return requireGame(roomCode).getBoard();
     }
 
     @Override

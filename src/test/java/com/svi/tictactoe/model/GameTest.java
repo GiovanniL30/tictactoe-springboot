@@ -3,6 +3,7 @@ package com.svi.tictactoe.model;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.exception.GameNotStartedException;
+import com.svi.tictactoe.exception.InvalidTurnException;
 import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +56,33 @@ class GameTest {
 
         assertNull(game.getBoard().getGrid()[0][0]);
         assertEquals(2, game.getRound());
+        assertEquals(Symbol.X, game.getCurrentTurn());
+    }
+
+    @Test
+    void alternatesTurnsStartingWithX() {
+        Game game = new Game("ROOM", new ArrayList<>(), new Board());
+        game.join("Alice");
+        game.join("Bob");
+
+        assertEquals(Symbol.X, game.getCurrentTurn());
+
+        game.placeMove(Symbol.X, 0, 0);
+        assertEquals(Symbol.O, game.getCurrentTurn());
+
+        assertThrows(InvalidTurnException.class, () -> game.placeMove(Symbol.X, 0, 1));
+        assertEquals(Symbol.O, game.getCurrentTurn());
+
+        game.placeMove(Symbol.O, 0, 1);
+        assertEquals(Symbol.X, game.getCurrentTurn());
+    }
+
+    @Test
+    void preventsMovesUntilTwoPlayersHaveJoined() {
+        Game game = new Game("ROOM", new ArrayList<>(), new Board());
+        game.join("Alice");
+
+        assertThrows(GameNotStartedException.class, () -> game.placeMove(Symbol.X, 0, 0));
     }
 
     @Test
