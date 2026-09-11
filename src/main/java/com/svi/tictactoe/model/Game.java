@@ -26,7 +26,7 @@ public class Game {
         this.players = players;
         this.spectators = new ArrayList<>();
         this.board = board;
-        this.round = 0;
+        this.round = 1;
     }
 
     public synchronized boolean placeMove(Symbol symbol, int x, int y) {
@@ -35,22 +35,6 @@ public class Game {
         }
 
         return board.placeSymbol(symbol, x, y);
-    }
-
-    public String getRoomCode() {
-        return roomCode;
-    }
-
-    public List<Player> getPlayers() {
-        return List.copyOf(players);
-    }
-
-    public List<Player> getSpectators() {
-        return List.copyOf(spectators);
-    }
-
-    public Board getBoard() {
-        return board;
     }
 
     public synchronized void startNextRound() {
@@ -64,9 +48,7 @@ public class Game {
 
     public synchronized Player join(String playerName) {
         if (isNameTaken(playerName)) {
-            throw new PlayerAlreadyExistsException(
-                    ErrorMessage.PLAYER_ALREADY_EXISTS.format(playerName)
-            );
+            throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(playerName));
         }
 
         if (isStarted()) {
@@ -85,21 +67,37 @@ public class Game {
         return players.size() == REQUIRED_PLAYER_COUNT;
     }
 
+    public int getRound() {
+        return round;
+    }
+
+    public String getRoomCode() {
+        return roomCode;
+    }
+
+    public List<Player> getPlayers() {
+        return List.copyOf(players);
+    }
+
+    public List<Player> getSpectators() {
+        return List.copyOf(spectators);
+    }
+
+    public Board getBoard() {
+        return board;
+    }
+
     private boolean isNameTaken(String playerName) {
         String normalizedName = normalizeName(playerName);
 
         return players.stream()
                 .anyMatch(player -> normalizeName(player.getPlayerName()).equals(normalizedName))
-                || spectators.stream()
-                .anyMatch(spectator -> normalizeName(spectator.getPlayerName()).equals(normalizedName));
+                || spectators.stream().anyMatch(spectator -> normalizeName(spectator.getPlayerName()).equals(normalizedName));
     }
 
     private String normalizeName(String playerName) {
         return playerName.trim().toLowerCase(Locale.ROOT);
     }
 
-    public int getRound() {
-        return round;
-    }
 
 }
