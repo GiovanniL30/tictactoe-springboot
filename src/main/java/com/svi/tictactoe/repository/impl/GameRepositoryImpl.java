@@ -29,13 +29,7 @@ public class GameRepositoryImpl implements GameRepository {
 
     @Override
     public Optional<Symbol[][]> placeMove(String roomCode, int x, int y, Symbol symbol) {
-        Optional<Game> gameOptional = findGame(roomCode);
-
-        if (gameOptional.isEmpty()) {
-            throw new GameNotFoundException(ErrorMessage.GAME_NOT_FOUND.format(roomCode));
-        }
-
-        Game game = gameOptional.get();
+        Game game = requireGame(roomCode);
 
         if (!game.placeMove(symbol, x, y)) {
             return Optional.empty();
@@ -45,7 +39,19 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
+    public Board getBoard(String roomCode) {
+        return requireGame(roomCode).getBoard();
+    }
+
+    @Override
     public Optional<Game> findGame(String roomCode) {
         return games.stream().filter(game -> game.getRoomCode().equals(roomCode)).findAny();
+    }
+
+    private Game requireGame(String roomCode) {
+        return findGame(roomCode)
+                .orElseThrow(() -> new GameNotFoundException(
+                        ErrorMessage.GAME_NOT_FOUND.format(roomCode)
+                ));
     }
 }

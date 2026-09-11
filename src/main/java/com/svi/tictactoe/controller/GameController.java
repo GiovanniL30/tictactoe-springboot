@@ -2,9 +2,10 @@ package com.svi.tictactoe.controller;
 
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.AddMoveResponse;
+import com.svi.tictactoe.dto.response.BoardResponse;
 import com.svi.tictactoe.dto.response.CreateGameResponse;
 import com.svi.tictactoe.constants.Symbol;
+import com.svi.tictactoe.model.Board;
 import com.svi.tictactoe.service.GameService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -32,12 +33,12 @@ public class GameController {
     }
 
     @PostMapping("/{roomCode}/move")
-    public ResponseEntity<AddMoveResponse> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
+    public ResponseEntity<BoardResponse> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
         Optional<Symbol[][]> updatedGrid = gameService.placeMove(roomCode, requestBody);
 
         return updatedGrid
-                .map(symbols -> ResponseEntity.ok(new AddMoveResponse("Move placed successfully.", symbols)))
-                .orElseGet(() -> ResponseEntity.badRequest().body(new AddMoveResponse("Failed to place move.", null)));
+                .map(symbols -> ResponseEntity.ok(new BoardResponse("Move placed successfully.", symbols)))
+                .orElseGet(() -> ResponseEntity.badRequest().body(new BoardResponse("Failed to place move.", null)));
     }
 
     @PostMapping("/{roomCode}/restart")
@@ -55,9 +56,11 @@ public class GameController {
         return null;
     }
 
-    @GetMapping("/{roomCode}/status/board")
-    public ResponseEntity<String> checkBoardStatus(@PathVariable String roomCode) {
-        return null;
+    @GetMapping("/{roomCode}/board")
+    public ResponseEntity<BoardResponse> checkBoardStatus(@PathVariable String roomCode) {
+        Board board = gameService.getBoard(roomCode);
+
+        return ResponseEntity.ok(new BoardResponse("Latest Board Grid", board.getGrid()));
     }
 
 
