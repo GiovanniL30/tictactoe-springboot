@@ -5,6 +5,7 @@ import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.exception.GameNotFoundException;
 import com.svi.tictactoe.model.Board;
 import com.svi.tictactoe.model.Game;
+import com.svi.tictactoe.model.Player;
 import com.svi.tictactoe.repository.GameRepository;
 import com.svi.tictactoe.util.CodeGenerator;
 import org.springframework.stereotype.Repository;
@@ -19,12 +20,14 @@ public class GameRepositoryImpl implements GameRepository {
     private final List<Game> games = new ArrayList<>();
 
     @Override
-    public String createGame() {
+    public Game createGame(String playerName) {
         String roomCode = CodeGenerator.generate();
+        Game game = new Game(roomCode, new ArrayList<>(), new Board());
+        game.join(playerName);
 
-        games.add(new Game(roomCode, new ArrayList<>(), new Board()));
+        games.add(game);
 
-        return roomCode;
+        return game;
     }
 
     @Override
@@ -44,9 +47,20 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
-    public void resetBoard(String roomCode) {
+    public Game getGame(String roomCode) {
+        return requireGame(roomCode);
+    }
+
+    @Override
+    public Game playAgain(String roomCode) {
         Game game = requireGame(roomCode);
-        game.getBoard().reset();
+        game.startNextRound();
+        return game;
+    }
+
+    @Override
+    public Player joinGame(String roomCode, String playerName) {
+        return requireGame(roomCode).join(playerName);
     }
 
     @Override

@@ -4,6 +4,7 @@ public enum ErrorMessage {
 
     POSITION_ALREADY_TAKEN("Position (%d, %d) is already taken."),
     GAME_NOT_FOUND("Game with room code '%s' was not found."),
+    GAME_NOT_STARTED("Game requires two players before another round can start."),
     PLAYER_NOT_FOUND("Player '%s' was not found."),
     INVALID_TURN("It is not player '%s''s turn."),
     INVALID_POSITION("Position (%d, %d) is invalid.");
