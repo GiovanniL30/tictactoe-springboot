@@ -5,18 +5,18 @@ import com.svi.tictactoe.constants.Symbol;
 public class BoardResponse {
 
     private final String message;
-    private final Symbol[][] board;
+    private final Symbol[][] grid;
 
-    public BoardResponse(String message, Symbol[][] board) {
+    public BoardResponse(String message, Symbol[][] grid) {
         this.message = message;
-        this.board = board;
+        this.grid = grid;
     }
 
     public String getMessage() {
         return message;
     }
 
-    public Symbol[][] getBoard() {
-        return board;
+    public Symbol[][] getGrid() {
+        return grid;
     }
 }

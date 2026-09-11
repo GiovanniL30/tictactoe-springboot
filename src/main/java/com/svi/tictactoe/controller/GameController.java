@@ -4,7 +4,6 @@ import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
 import com.svi.tictactoe.dto.response.BoardResponse;
 import com.svi.tictactoe.dto.response.CreateGameResponse;
-import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.model.Board;
 import com.svi.tictactoe.service.GameService;
 import jakarta.validation.Valid;
@@ -34,10 +33,10 @@ public class GameController {
 
     @PostMapping("/{roomCode}/move")
     public ResponseEntity<BoardResponse> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
-        Optional<Symbol[][]> updatedGrid = gameService.placeMove(roomCode, requestBody);
+        Optional<Board> updatedBoard = gameService.placeMove(roomCode, requestBody);
 
-        return updatedGrid
-                .map(symbols -> ResponseEntity.ok(new BoardResponse("Move placed successfully.", symbols)))
+        return updatedBoard
+                .map(board -> ResponseEntity.ok(new BoardResponse("Move placed successfully.", board.getGrid())))
                 .orElseGet(() -> ResponseEntity.badRequest().body(new BoardResponse("Failed to place move.", null)));
     }
 

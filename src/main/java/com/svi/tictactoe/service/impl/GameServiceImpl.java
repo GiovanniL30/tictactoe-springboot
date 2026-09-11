@@ -1,7 +1,6 @@
 package com.svi.tictactoe.service.impl;
 
 import com.svi.tictactoe.dto.request.AddMoveRequest;
-import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.model.Board;
 import com.svi.tictactoe.repository.GameRepository;
 import com.svi.tictactoe.service.GameService;
@@ -24,7 +23,7 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public Optional<Symbol[][]> placeMove(String roomCode, AddMoveRequest requestBody) {
+    public Optional<Board> placeMove(String roomCode, AddMoveRequest requestBody) {
         return gameRepository.placeMove(roomCode, requestBody.getX(), requestBody.getY(), requestBody.getSymbol());
     }
 

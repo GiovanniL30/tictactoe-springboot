@@ -28,14 +28,14 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
-    public Optional<Symbol[][]> placeMove(String roomCode, int x, int y, Symbol symbol) {
+    public Optional<Board> placeMove(String roomCode, int x, int y, Symbol symbol) {
         Game game = requireGame(roomCode);
 
         if (!game.placeMove(symbol, x, y)) {
             return Optional.empty();
         }
 
-        return Optional.of(game.getBoard().getGrid());
+        return Optional.of(game.getBoard());
     }
 
     @Override
