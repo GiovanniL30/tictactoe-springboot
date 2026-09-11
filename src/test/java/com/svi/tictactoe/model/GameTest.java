@@ -3,6 +3,7 @@ package com.svi.tictactoe.model;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.exception.GameNotStartedException;
+import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -54,5 +55,19 @@ class GameTest {
 
         assertNull(game.getBoard().getGrid()[0][0]);
         assertEquals(1, game.getRound());
+    }
+
+    @Test
+    void rejectsDuplicateNamesRegardlessOfCaseForPlayersAndSpectators() {
+        Game game = new Game("ROOM", new ArrayList<>(), new Board());
+        game.join("Alice");
+
+        assertThrows(PlayerAlreadyExistsException.class, () -> game.join("alice"));
+
+        game.join("Bob");
+        game.join("Charlie");
+
+        assertThrows(PlayerAlreadyExistsException.class, () -> game.join("CHARLIE"));
+        assertEquals("Alice", game.getPlayers().getFirst().getPlayerName());
     }
 }

@@ -4,10 +4,12 @@ import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.exception.GameNotStartedException;
+import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import com.svi.tictactoe.exception.PositionAlreadyTakenException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class Game {
 
@@ -61,6 +63,12 @@ public class Game {
     }
 
     public synchronized Player join(String playerName) {
+        if (isNameTaken(playerName)) {
+            throw new PlayerAlreadyExistsException(
+                    ErrorMessage.PLAYER_ALREADY_EXISTS.format(playerName)
+            );
+        }
+
         if (isStarted()) {
             Player spectator = new Player(playerName, null, PlayerType.SPECTATOR);
             spectators.add(spectator);
@@ -75,6 +83,19 @@ public class Game {
 
     public synchronized boolean isStarted() {
         return players.size() == REQUIRED_PLAYER_COUNT;
+    }
+
+    private boolean isNameTaken(String playerName) {
+        String normalizedName = normalizeName(playerName);
+
+        return players.stream()
+                .anyMatch(player -> normalizeName(player.getPlayerName()).equals(normalizedName))
+                || spectators.stream()
+                .anyMatch(spectator -> normalizeName(spectator.getPlayerName()).equals(normalizedName));
+    }
+
+    private String normalizeName(String playerName) {
+        return playerName.trim().toLowerCase(Locale.ROOT);
     }
 
     public int getRound() {
