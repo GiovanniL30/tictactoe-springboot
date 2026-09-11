@@ -28,6 +28,11 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
+    public void restartGame(String roomCode) {
+        gameRepository.restartGame(roomCode);
+    }
+
+    @Override
     public Board getBoard(String roomCode) {
         return gameRepository.getBoard(roomCode);
     }

@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -41,8 +42,9 @@ public class GameController {
     }
 
     @PostMapping("/{roomCode}/restart")
-    public ResponseEntity<String> restartGame(@PathVariable String roomCode) {
-        return null;
+    public ResponseEntity<Map<String, String>> restartGame(@PathVariable String roomCode) {
+        gameService.restartGame(roomCode);
+        return ResponseEntity.ok(Map.of("message", "Game have been restarted."));
     }
 
     @PostMapping("/{roomCode}join")

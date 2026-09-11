@@ -6,7 +6,7 @@ public class Board {
 
     private static final int SIZE = 3;
 
-    private final Symbol[][] grid;
+    private Symbol[][] grid;
 
     public Board() {
         this.grid = new Symbol[SIZE][SIZE];
@@ -33,6 +33,10 @@ public class Board {
 
     public boolean isEmpty(int x, int y) {
         return grid[x][y] == null;
+    }
+
+    public void reset() {
+        this.grid = new Symbol[SIZE][SIZE];
     }
 
     private boolean isValidPosition(int x, int y) {

@@ -44,6 +44,12 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
+    public void restartGame(String roomCode) {
+        Game game = requireGame(roomCode);
+        game.getBoard().reset();
+    }
+
+    @Override
     public Optional<Game> findGame(String roomCode) {
         return games.stream().filter(game -> game.getRoomCode().equals(roomCode)).findAny();
     }

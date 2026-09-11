@@ -9,8 +9,13 @@ import java.util.Optional;
 public interface GameRepository {
 
     String createGame();
+
     Optional<Board> placeMove(String roomCode, int x, int y, Symbol symbol);
+
     Board getBoard(String roomCode);
+
+    void restartGame(String roomCode);
+
     Optional<Game> findGame(String roomCode);
 
 }
