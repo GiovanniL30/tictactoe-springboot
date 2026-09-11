@@ -1,7 +1,6 @@
 package com.svi.tictactoe.dto.request;
 
 import com.svi.tictactoe.constants.Symbol;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.validator.constraints.Range;
 
@@ -17,9 +16,6 @@ public class AddMoveRequest {
 
     @NotNull(message = "symbol is required.")
     private Symbol symbol;
-
-    @NotBlank(message = "playerName is required.")
-    private String playerName;
 
     public Integer getX() {
         return x;
@@ -45,11 +41,4 @@ public class AddMoveRequest {
         this.symbol = symbol;
     }
 
-    public String getPlayerName() {
-        return playerName;
-    }
-
-    public void setPlayerName(String playerName) {
-        this.playerName = playerName;
-    }
 }
