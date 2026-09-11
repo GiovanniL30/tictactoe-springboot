@@ -8,7 +8,10 @@ public enum ErrorMessage {
     PLAYER_ALREADY_EXISTS("Participant name '%s' is already in use."),
     PLAYER_NOT_FOUND("Player '%s' was not found."),
     INVALID_TURN("It is player '%s''s turn."),
-    INVALID_POSITION("Position (%d, %d) is invalid.");
+    INVALID_POSITION("Position (%d, %d) is invalid."),
+    VALIDATION_FAILED("Validation failed."),
+    INVALID_SYMBOL("symbol must be either X or O."),
+    INVALID_REQUEST_BODY("Request body is missing or invalid.");
 
     private final String message;
 

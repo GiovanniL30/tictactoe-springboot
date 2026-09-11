@@ -4,23 +4,26 @@ package com.svi.tictactoe.service;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.model.Game;
-import com.svi.tictactoe.model.Player;
-
-import java.util.Optional;
+import com.svi.tictactoe.dto.response.BoardResponse;
+import com.svi.tictactoe.dto.response.CreateGameResponse;
+import com.svi.tictactoe.dto.response.GameStatusResponse;
+import com.svi.tictactoe.dto.response.JoinGameResponse;
+import com.svi.tictactoe.dto.response.PlayAgainResponse;
 
 public interface GameService {
 
-    Game createGame(CreateGameRequest requestBody);
+    CreateGameResponse createGame(CreateGameRequest requestBody);
 
-    Optional<Game> placeMove(String roomCode, AddMoveRequest requestBody);
+    BoardResponse placeMove(String roomCode, AddMoveRequest requestBody);
 
-    Game playAgain(String roomCode);
+    PlayAgainResponse playAgain(String roomCode);
 
-    Player joinGame(String roomCode, JoinGameRequest requestBody);
+    JoinGameResponse joinGame(String roomCode, JoinGameRequest requestBody);
 
-    Game getGame(String roomCode);
+    GameStatusResponse getGameStatus(String roomCode);
 
-    Game deleteGame(String roomCode);
+    BoardResponse getBoardStatus(String roomCode);
+
+    GameStatusResponse deleteGame(String roomCode);
 
 }

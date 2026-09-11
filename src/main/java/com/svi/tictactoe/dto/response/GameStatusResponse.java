@@ -5,51 +5,13 @@ import com.svi.tictactoe.model.Player;
 
 import java.util.List;
 
-public class GameStatusResponse {
+public record GameStatusResponse(
+        Symbol[][] grid,
+        List<Player> players,
+        String roomCode,
+        int round,
+        Symbol currentTurn,
+        int spectatorCount,
+        String message) {
 
-    private final Symbol[][] grid;
-    private final List<Player> players;
-    private final String roomCode;
-    private final int round;
-    private final Symbol currentTurn;
-    private final int spectatorCount;
-    private final String message;
-
-    public GameStatusResponse(Symbol[][] grid, List<Player> players, String roomCode, int round, Symbol currentTurn, int spectatorCount, String message) {
-        this.grid = grid;
-        this.players = players;
-        this.roomCode = roomCode;
-        this.round = round;
-        this.currentTurn = currentTurn;
-        this.spectatorCount = spectatorCount;
-        this.message = message;
-    }
-
-    public Symbol[][] getGrid() {
-        return grid;
-    }
-
-    public List<Player> getPlayers() {
-        return players;
-    }
-
-    public String getRoomCode() {
-        return roomCode;
-    }
-
-    public int getRound() {
-        return round;
-    }
-
-    public Symbol getCurrentTurn() {
-        return currentTurn;
-    }
-
-    public int getSpectatorCount() {
-        return spectatorCount;
-    }
-
-    public String getMessage() {
-        return message;
-    }
 }

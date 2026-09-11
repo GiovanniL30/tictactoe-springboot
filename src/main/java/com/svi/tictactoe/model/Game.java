@@ -4,6 +4,7 @@ import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.exception.GameNotStartedException;
+import com.svi.tictactoe.exception.InvalidPositionException;
 import com.svi.tictactoe.exception.InvalidTurnException;
 import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import com.svi.tictactoe.exception.PositionAlreadyTakenException;
@@ -32,7 +33,7 @@ public class Game {
         this.currentTurn = Symbol.X;
     }
 
-    public synchronized boolean placeMove(Symbol symbol, int x, int y) {
+    public synchronized void placeMove(Symbol symbol, int x, int y) {
         if (!isStarted()) {
             throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
         }
@@ -41,17 +42,16 @@ public class Game {
             throw new InvalidTurnException(ErrorMessage.INVALID_TURN.format(currentTurn));
         }
 
+        if (!board.isValidPosition(x, y)) {
+            throw new InvalidPositionException(ErrorMessage.INVALID_POSITION.format(x, y));
+        }
+
         if (!board.isEmpty(x, y)) {
             throw new PositionAlreadyTakenException(ErrorMessage.POSITION_ALREADY_TAKEN.format(x, y));
         }
 
-        boolean placed = board.placeSymbol(symbol, x, y);
-
-        if (placed) {
-            currentTurn = currentTurn == Symbol.X ? Symbol.O : Symbol.X;
-        }
-
-        return placed;
+        board.placeSymbol(symbol, x, y);
+        currentTurn = currentTurn == Symbol.X ? Symbol.O : Symbol.X;
     }
 
     public synchronized void startNextRound() {

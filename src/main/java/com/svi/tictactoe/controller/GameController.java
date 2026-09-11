@@ -8,19 +8,14 @@ import com.svi.tictactoe.dto.response.CreateGameResponse;
 import com.svi.tictactoe.dto.response.GameStatusResponse;
 import com.svi.tictactoe.dto.response.JoinGameResponse;
 import com.svi.tictactoe.dto.response.PlayAgainResponse;
-import com.svi.tictactoe.model.Game;
-import com.svi.tictactoe.model.Player;
-import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.service.GameService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
-
 @RestController
-@RequestMapping("/api/games")
+@RequestMapping("/api/v1/games")
 public class GameController {
 
     private final GameService gameService;
@@ -31,93 +26,38 @@ public class GameController {
 
     @PostMapping
     public ResponseEntity<CreateGameResponse> createGame(@Valid @RequestBody CreateGameRequest requestBody) {
-        Game game = gameService.createGame(requestBody);
-        CreateGameResponse response = new CreateGameResponse(
-                "Game created successfully.",
-                game.getRoomCode(),
-                game.getPlayers().getFirst()
-        );
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(gameService.createGame(requestBody));
     }
 
     @PostMapping("/{roomCode}/move")
     public ResponseEntity<BoardResponse> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
-        Optional<Game> updatedGame = gameService.placeMove(roomCode, requestBody);
-
-        return updatedGame
-                .map(game -> ResponseEntity.ok(new BoardResponse(
-                        "Move placed successfully.",
-                        game.getBoard().getGrid(),
-                        game.getCurrentTurn()
-                )))
-                .orElseGet(() -> ResponseEntity.badRequest().body(
-                        new BoardResponse("Failed to place move.", null, null)
-                ));
+        return ResponseEntity.ok(gameService.placeMove(roomCode, requestBody));
     }
 
     @PostMapping("/{roomCode}/play-again")
     public ResponseEntity<PlayAgainResponse> playAgain(@PathVariable String roomCode) {
-        Game game = gameService.playAgain(roomCode);
-
-        return ResponseEntity.ok(new PlayAgainResponse(
-                "New round started.",
-                game.getRound(),
-                game.getCurrentTurn(),
-                game.getPlayers()
-        ));
+        return ResponseEntity.ok(gameService.playAgain(roomCode));
     }
 
     @PostMapping("/{roomCode}/join")
     public ResponseEntity<JoinGameResponse> joinGame(@PathVariable String roomCode, @Valid @RequestBody JoinGameRequest requestBody) {
-        Player participant = gameService.joinGame(roomCode, requestBody);
-        String message = participant.getType() == PlayerType.PLAYER
-                ? "Player joined successfully."
-                : "Game already has two players. Joined as spectator.";
-
-        return ResponseEntity.ok(new JoinGameResponse(message, participant));
+        return ResponseEntity.ok(gameService.joinGame(roomCode, requestBody));
     }
 
     @GetMapping("/{roomCode}")
     public ResponseEntity<GameStatusResponse> checkGameStatus(@PathVariable String roomCode) {
-        Game game = gameService.getGame(roomCode);
-
-        return ResponseEntity.ok(new GameStatusResponse(
-                game.getBoard().getGrid(),
-                game.getPlayers(),
-                game.getRoomCode(),
-                game.getRound(),
-                game.getCurrentTurn(),
-                game.getSpectators().size(),
-                "Game status retrieved successfully."
-        ));
+        return ResponseEntity.ok(gameService.getGameStatus(roomCode));
     }
 
     @GetMapping("/{roomCode}/board")
     public ResponseEntity<BoardResponse> checkBoardStatus(@PathVariable String roomCode) {
-        Game game = gameService.getGame(roomCode);
-
-        return ResponseEntity.ok(new BoardResponse(
-                "Latest Board Grid",
-                game.getBoard().getGrid(),
-                game.getCurrentTurn()
-        ));
+        return ResponseEntity.ok(gameService.getBoardStatus(roomCode));
     }
 
 
     @DeleteMapping("/{roomCode}")
     public ResponseEntity<GameStatusResponse> deleteRoom(@PathVariable String roomCode) {
-        Game game = gameService.deleteGame(roomCode);
-
-        return ResponseEntity.ok(new GameStatusResponse(
-                game.getBoard().getGrid(),
-                game.getPlayers(),
-                game.getRoomCode(),
-                game.getRound(),
-                game.getCurrentTurn(),
-                game.getSpectators().size(),
-                "Game deleted successfully."
-        ));
+        return ResponseEntity.ok(gameService.deleteGame(roomCode));
     }
 
 }

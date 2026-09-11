@@ -5,59 +5,53 @@ import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.model.Game;
-import com.svi.tictactoe.model.Player;
+import com.svi.tictactoe.dto.response.BoardResponse;
+import com.svi.tictactoe.dto.response.CreateGameResponse;
+import com.svi.tictactoe.dto.response.JoinGameResponse;
+import com.svi.tictactoe.dto.response.PlayAgainResponse;
 import com.svi.tictactoe.repository.impl.GameRepositoryImpl;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameServiceImplTest {
 
     @Test
     void coordinatesCreationJoiningAndSpectatorAssignment() {
         GameService service = new GameServiceImpl(new GameRepositoryImpl());
-        CreateGameRequest createRequest = new CreateGameRequest();
-        createRequest.setPlayerName("Alice");
+        CreateGameRequest createRequest = new CreateGameRequest("Alice");
 
-        Game game = service.createGame(createRequest);
-        Player secondPlayer = service.joinGame(game.getRoomCode(), joinRequest("Bob"));
-        Player spectator = service.joinGame(game.getRoomCode(), joinRequest("Charlie"));
+        CreateGameResponse game = service.createGame(createRequest);
+        JoinGameResponse secondPlayer = service.joinGame(game.roomCode(), joinRequest("Bob"));
+        JoinGameResponse spectator = service.joinGame(game.roomCode(), joinRequest("Charlie"));
 
-        assertEquals(Symbol.X, game.getPlayers().getFirst().getSymbol());
-        assertEquals(Symbol.O, secondPlayer.getSymbol());
-        assertEquals(PlayerType.SPECTATOR, spectator.getType());
-        assertNull(spectator.getSymbol());
+        assertEquals(Symbol.X, game.player().getSymbol());
+        assertEquals(Symbol.O, secondPlayer.participant().getSymbol());
+        assertEquals(PlayerType.SPECTATOR, spectator.participant().getType());
+        assertNull(spectator.participant().getSymbol());
     }
 
     @Test
     void coordinatesMovePlacementAndNextRound() {
         GameService service = new GameServiceImpl(new GameRepositoryImpl());
-        CreateGameRequest createRequest = new CreateGameRequest();
-        createRequest.setPlayerName("Alice");
-        Game game = service.createGame(createRequest);
-        service.joinGame(game.getRoomCode(), joinRequest("Bob"));
+        CreateGameRequest createRequest = new CreateGameRequest("Alice");
+        CreateGameResponse game = service.createGame(createRequest);
+        service.joinGame(game.roomCode(), joinRequest("Bob"));
 
-        AddMoveRequest moveRequest = new AddMoveRequest();
-        moveRequest.setX(0);
-        moveRequest.setY(0);
-        moveRequest.setSymbol(Symbol.X);
+        AddMoveRequest moveRequest = new AddMoveRequest(0, 0, Symbol.X);
 
-        assertTrue(service.placeMove(game.getRoomCode(), moveRequest).isPresent());
-        assertEquals(Symbol.X, game.getBoard().getGrid()[0][0]);
+        BoardResponse board = service.placeMove(game.roomCode(), moveRequest);
+        assertEquals(Symbol.X, board.grid()[0][0]);
 
-        Game nextRound = service.playAgain(game.getRoomCode());
+        PlayAgainResponse nextRound = service.playAgain(game.roomCode());
 
-        assertEquals(2, nextRound.getRound());
-        assertNull(nextRound.getBoard().getGrid()[0][0]);
+        assertEquals(2, nextRound.currentRound());
+        assertNull(service.getBoardStatus(game.roomCode()).grid()[0][0]);
     }
 
     private JoinGameRequest joinRequest(String playerName) {
-        JoinGameRequest request = new JoinGameRequest();
-        request.setPlayerName(playerName);
-        return request;
+        return new JoinGameRequest(playerName);
     }
 }

@@ -39,7 +39,7 @@ public class Board {
         this.grid = new Symbol[SIZE][SIZE];
     }
 
-    private boolean isValidPosition(int x, int y) {
+    public boolean isValidPosition(int x, int y) {
         return x >= 0 && x < SIZE && y >= 0 && y < SIZE;
     }
 }

@@ -1,9 +1,16 @@
 package com.svi.tictactoe.service.impl;
 
 import com.svi.tictactoe.constants.ErrorMessage;
+import com.svi.tictactoe.constants.PlayerType;
+import com.svi.tictactoe.constants.SuccessMessage;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
+import com.svi.tictactoe.dto.response.BoardResponse;
+import com.svi.tictactoe.dto.response.CreateGameResponse;
+import com.svi.tictactoe.dto.response.GameStatusResponse;
+import com.svi.tictactoe.dto.response.JoinGameResponse;
+import com.svi.tictactoe.dto.response.PlayAgainResponse;
 import com.svi.tictactoe.exception.GameNotFoundException;
 import com.svi.tictactoe.model.Board;
 import com.svi.tictactoe.model.Game;
@@ -14,7 +21,6 @@ import com.svi.tictactoe.util.CodeGenerator;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Optional;
 
 @Service
 public class GameServiceImpl implements GameService {
@@ -26,51 +32,83 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public Game createGame(CreateGameRequest requestBody) {
+    public CreateGameResponse createGame(CreateGameRequest requestBody) {
         Game game = new Game(generateUniqueRoomCode(), new ArrayList<>(), new Board());
-        game.join(requestBody.getPlayerName());
+        game.join(requestBody.playerName());
         gameRepository.save(game);
-        return game;
+
+        return new CreateGameResponse(
+                SuccessMessage.GAME_CREATED.getMessage(),
+                game.getRoomCode(),
+                game.getPlayers().getFirst()
+        );
     }
 
     @Override
-    public Optional<Game> placeMove(String roomCode, AddMoveRequest requestBody) {
+    public BoardResponse placeMove(String roomCode, AddMoveRequest requestBody) {
         Game game = requireGame(roomCode);
-
-        if (!game.placeMove(requestBody.getSymbol(), requestBody.getX(), requestBody.getY())) {
-            return Optional.empty();
-        }
-
+        game.placeMove(requestBody.symbol(), requestBody.x(), requestBody.y());
         gameRepository.save(game);
-        return Optional.of(game);
+
+        return new BoardResponse(
+                SuccessMessage.MOVE_PLACED.getMessage(),
+                game.getBoard().getGrid(),
+                game.getCurrentTurn()
+        );
     }
 
     @Override
-    public Game playAgain(String roomCode) {
+    public PlayAgainResponse playAgain(String roomCode) {
         Game game = requireGame(roomCode);
         game.startNextRound();
         gameRepository.save(game);
-        return game;
+
+        return new PlayAgainResponse(
+                SuccessMessage.NEW_ROUND_STARTED.getMessage(),
+                game.getRound(),
+                game.getCurrentTurn(),
+                game.getPlayers()
+        );
     }
 
     @Override
-    public Player joinGame(String roomCode, JoinGameRequest requestBody) {
+    public JoinGameResponse joinGame(String roomCode, JoinGameRequest requestBody) {
         Game game = requireGame(roomCode);
-        Player participant = game.join(requestBody.getPlayerName());
+        Player participant = game.join(requestBody.playerName());
         gameRepository.save(game);
-        return participant;
+
+        String message = participant.getType() == PlayerType.PLAYER
+                ? SuccessMessage.PLAYER_JOINED.getMessage()
+                : SuccessMessage.SPECTATOR_JOINED.getMessage();
+
+        return new JoinGameResponse(message, participant);
     }
 
     @Override
-    public Game getGame(String roomCode) {
-        return requireGame(roomCode);
+    public GameStatusResponse getGameStatus(String roomCode) {
+        return toGameStatusResponse(
+                requireGame(roomCode),
+                SuccessMessage.GAME_STATUS_RETRIEVED.getMessage()
+        );
     }
 
     @Override
-    public Game deleteGame(String roomCode) {
+    public BoardResponse getBoardStatus(String roomCode) {
+        Game game = requireGame(roomCode);
+
+        return new BoardResponse(
+                SuccessMessage.BOARD_STATUS_RETRIEVED.getMessage(),
+                game.getBoard().getGrid(),
+                game.getCurrentTurn()
+        );
+    }
+
+    @Override
+    public GameStatusResponse deleteGame(String roomCode) {
         requireGame(roomCode);
+        Game deletedGame = gameRepository.delete(roomCode);
 
-        return gameRepository.delete(roomCode);
+        return toGameStatusResponse(deletedGame, SuccessMessage.GAME_DELETED.getMessage());
     }
 
     private Game requireGame(String roomCode) {
@@ -88,5 +126,17 @@ public class GameServiceImpl implements GameService {
         } while (gameRepository.findByRoomCode(roomCode).isPresent());
 
         return roomCode;
+    }
+
+    private GameStatusResponse toGameStatusResponse(Game game, String message) {
+        return new GameStatusResponse(
+                game.getBoard().getGrid(),
+                game.getPlayers(),
+                game.getRoomCode(),
+                game.getRound(),
+                game.getCurrentTurn(),
+                game.getSpectators().size(),
+                message
+        );
     }
 }

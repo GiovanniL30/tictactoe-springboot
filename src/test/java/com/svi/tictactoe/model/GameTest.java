@@ -4,6 +4,7 @@ import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.exception.GameNotStartedException;
 import com.svi.tictactoe.exception.InvalidTurnException;
+import com.svi.tictactoe.exception.InvalidPositionException;
 import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import org.junit.jupiter.api.Test;
 
@@ -83,6 +84,16 @@ class GameTest {
         game.join("Alice");
 
         assertThrows(GameNotStartedException.class, () -> game.placeMove(Symbol.X, 0, 0));
+    }
+
+    @Test
+    void rejectsPositionsOutsideTheBoard() {
+        Game game = new Game("ROOM", new ArrayList<>(), new Board());
+        game.join("Alice");
+        game.join("Bob");
+
+        assertThrows(InvalidPositionException.class, () -> game.placeMove(Symbol.X, 3, 0));
+        assertEquals(Symbol.X, game.getCurrentTurn());
     }
 
     @Test
