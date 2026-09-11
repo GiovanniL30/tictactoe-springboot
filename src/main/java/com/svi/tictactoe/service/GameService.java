@@ -12,7 +12,7 @@ public interface GameService {
 
     Optional<Board> placeMove(String roomCode, AddMoveRequest requestBody);
 
-    void restartGame(String roomCode);
+    void resetBoard(String roomCode);
 
     Board getBoard(String roomCode);
 

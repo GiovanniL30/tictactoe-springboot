@@ -44,7 +44,7 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
-    public void restartGame(String roomCode) {
+    public void resetBoard(String roomCode) {
         Game game = requireGame(roomCode);
         game.getBoard().reset();
     }

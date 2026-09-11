@@ -14,7 +14,7 @@ public interface GameRepository {
 
     Board getBoard(String roomCode);
 
-    void restartGame(String roomCode);
+    void resetBoard(String roomCode);
 
     Optional<Game> findGame(String roomCode);
 

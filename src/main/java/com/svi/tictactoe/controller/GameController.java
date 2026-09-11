@@ -41,10 +41,10 @@ public class GameController {
                 .orElseGet(() -> ResponseEntity.badRequest().body(new BoardResponse("Failed to place move.", null)));
     }
 
-    @PostMapping("/{roomCode}/restart")
-    public ResponseEntity<Map<String, String>> restartGame(@PathVariable String roomCode) {
-        gameService.restartGame(roomCode);
-        return ResponseEntity.ok(Map.of("message", "Game have been restarted."));
+    @PostMapping("/{roomCode}/board/reset")
+    public ResponseEntity<Map<String, String>> resetBoard(@PathVariable String roomCode) {
+        gameService.resetBoard(roomCode);
+        return ResponseEntity.ok(Map.of("message", "Board has been reset."));
     }
 
     @PostMapping("/{roomCode}join")
