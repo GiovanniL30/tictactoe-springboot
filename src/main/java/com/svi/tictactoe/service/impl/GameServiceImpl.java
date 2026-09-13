@@ -71,8 +71,7 @@ public class GameServiceImpl implements GameService {
                 game.getRoomCode(),
                 game.getActiveGameId(),
                 game.getRound(),
-                game.getCurrentTurn(),
-                game.getPlayers()
+                game.getCurrentTurn()
         );
     }
 
