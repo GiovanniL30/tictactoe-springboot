@@ -2,8 +2,10 @@ package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.BoardResponse;
+import com.svi.tictactoe.dto.response.CreateGameResponse;
 import com.svi.tictactoe.dto.response.GameStatusResponse;
 import com.svi.tictactoe.entity.GameByIdEntity;
+import com.svi.tictactoe.model.Game;
 import com.svi.tictactoe.model.Player;
 
 import java.util.List;
@@ -15,12 +17,43 @@ public final class GameMapper {
     private GameMapper() {
     }
 
+    public static CreateGameResponse toCreateGameResponse(Game game, String message) {
+        return new CreateGameResponse(
+                message,
+                game.getRoomCode(),
+                game.getActiveGameId(),
+                game.getPlayers().getFirst()
+        );
+    }
+
+    public static BoardResponse toBoardResponse(Game game, String message) {
+        return new BoardResponse(
+                message,
+                game.getActiveGameId(),
+                game.getBoard().getGrid(),
+                game.getCurrentTurn()
+        );
+    }
+
     public static BoardResponse toBoardResponse(GameByIdEntity entity, String message) {
         return new BoardResponse(
                 message,
                 entity.getGameId(),
                 toGrid(entity.getBoard()),
                 toSymbol(entity.getCurrentTurn())
+        );
+    }
+
+    public static GameStatusResponse toGameStatusResponse(Game game, String message) {
+        return new GameStatusResponse(
+                game.getBoard().getGrid(),
+                game.getPlayers(),
+                game.getRoomCode(),
+                game.getActiveGameId(),
+                game.getRound(),
+                game.getCurrentTurn(),
+                game.getSpectators().size(),
+                message
         );
     }
 

@@ -12,6 +12,9 @@ import com.svi.tictactoe.dto.response.GameStatusResponse;
 import com.svi.tictactoe.dto.response.JoinGameResponse;
 import com.svi.tictactoe.dto.response.PlayAgainResponse;
 import com.svi.tictactoe.exception.GameNotFoundException;
+import com.svi.tictactoe.mapper.GameMapper;
+import com.svi.tictactoe.mapper.PlayerMapper;
+import com.svi.tictactoe.mapper.RoomMapper;
 import com.svi.tictactoe.model.Board;
 import com.svi.tictactoe.model.Game;
 import com.svi.tictactoe.model.Player;
@@ -38,12 +41,7 @@ public class GameServiceImpl implements GameService {
         game.join(requestBody.playerName());
         gameRepository.save(game);
 
-        return new CreateGameResponse(
-                SuccessMessage.GAME_CREATED.getMessage(),
-                game.getRoomCode(),
-                game.getActiveGameId(),
-                game.getPlayers().getFirst()
-        );
+        return GameMapper.toCreateGameResponse(game, SuccessMessage.GAME_CREATED.getMessage());
     }
 
     @Override
@@ -52,12 +50,7 @@ public class GameServiceImpl implements GameService {
         game.placeMove(requestBody.symbol(), requestBody.x(), requestBody.y());
         gameRepository.save(game);
 
-        return new BoardResponse(
-                SuccessMessage.MOVE_PLACED.getMessage(),
-                game.getActiveGameId(),
-                game.getBoard().getGrid(),
-                game.getCurrentTurn()
-        );
+        return GameMapper.toBoardResponse(game, SuccessMessage.MOVE_PLACED.getMessage());
     }
 
     @Override
@@ -66,13 +59,7 @@ public class GameServiceImpl implements GameService {
         game.startNextRound();
         gameRepository.save(game);
 
-        return new PlayAgainResponse(
-                SuccessMessage.NEW_ROUND_STARTED.getMessage(),
-                game.getRoomCode(),
-                game.getActiveGameId(),
-                game.getRound(),
-                game.getCurrentTurn()
-        );
+        return RoomMapper.toPlayAgainResponse(game, SuccessMessage.NEW_ROUND_STARTED.getMessage());
     }
 
     @Override
@@ -85,12 +72,12 @@ public class GameServiceImpl implements GameService {
                 ? SuccessMessage.PLAYER_JOINED.getMessage()
                 : SuccessMessage.SPECTATOR_JOINED.getMessage();
 
-        return new JoinGameResponse(message, participant);
+        return PlayerMapper.toJoinGameResponse(participant, message);
     }
 
     @Override
     public GameStatusResponse getGameStatus(String roomCode) {
-        return toGameStatusResponse(
+        return GameMapper.toGameStatusResponse(
                 requireGame(roomCode),
                 SuccessMessage.GAME_STATUS_RETRIEVED.getMessage()
         );
@@ -100,12 +87,7 @@ public class GameServiceImpl implements GameService {
     public BoardResponse getBoardStatus(String roomCode) {
         Game game = requireGame(roomCode);
 
-        return new BoardResponse(
-                SuccessMessage.BOARD_STATUS_RETRIEVED.getMessage(),
-                game.getActiveGameId(),
-                game.getBoard().getGrid(),
-                game.getCurrentTurn()
-        );
+        return GameMapper.toBoardResponse(game, SuccessMessage.BOARD_STATUS_RETRIEVED.getMessage());
     }
 
     @Override
@@ -113,7 +95,7 @@ public class GameServiceImpl implements GameService {
         requireGame(roomCode);
         Game deletedGame = gameRepository.delete(roomCode);
 
-        return toGameStatusResponse(deletedGame, SuccessMessage.GAME_DELETED.getMessage());
+        return GameMapper.toGameStatusResponse(deletedGame, SuccessMessage.GAME_DELETED.getMessage());
     }
 
     private Game requireGame(String roomCode) {
@@ -140,16 +122,4 @@ public class GameServiceImpl implements GameService {
         return roomCode;
     }
 
-    private GameStatusResponse toGameStatusResponse(Game game, String message) {
-        return new GameStatusResponse(
-                game.getBoard().getGrid(),
-                game.getPlayers(),
-                game.getRoomCode(),
-                game.getActiveGameId(),
-                game.getRound(),
-                game.getCurrentTurn(),
-                game.getSpectators().size(),
-                message
-        );
-    }
 }
