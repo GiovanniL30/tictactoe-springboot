@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS games_by_id (
     status text,
     current_turn text,
     winner text,
-    board list<text>,
+    board list<text>
 );
 
 CREATE TABLE IF NOT EXISTS moves_by_game (
