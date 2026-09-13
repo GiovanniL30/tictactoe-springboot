@@ -14,6 +14,8 @@ import com.svi.tictactoe.service.impl.GameServiceImpl;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class GameServiceImplTest {
@@ -27,6 +29,7 @@ class GameServiceImplTest {
         JoinGameResponse secondPlayer = service.joinGame(game.roomCode(), joinRequest("Bob"));
         JoinGameResponse spectator = service.joinGame(game.roomCode(), joinRequest("Charlie"));
 
+        assertNotNull(game.gameId());
         assertEquals(Symbol.X, game.player().getSymbol());
         assertEquals(Symbol.O, secondPlayer.participant().getSymbol());
         assertEquals(PlayerType.SPECTATOR, spectator.participant().getType());
@@ -42,12 +45,15 @@ class GameServiceImplTest {
 
         AddMoveRequest moveRequest = new AddMoveRequest(0, 0, Symbol.X);
 
-        BoardResponse board = service.placeMove(game.roomCode(), moveRequest);
+        BoardResponse board = service.placeMove(game.gameId(), moveRequest);
         assertEquals(Symbol.X, board.grid()[0][0]);
+        assertEquals(game.gameId(), board.gameId());
 
         PlayAgainResponse nextRound = service.playAgain(game.roomCode());
 
         assertEquals(2, nextRound.currentRound());
+        assertEquals(game.roomCode(), nextRound.roomCode());
+        assertNotEquals(game.gameId(), nextRound.gameId());
         assertNull(service.getBoardStatus(game.roomCode()).grid()[0][0]);
     }
 

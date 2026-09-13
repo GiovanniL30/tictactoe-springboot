@@ -12,12 +12,14 @@ import com.svi.tictactoe.exception.PositionAlreadyTakenException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 public class Game {
 
     private static final int REQUIRED_PLAYER_COUNT = 2;
 
     private final String roomCode;
+    private UUID activeGameId;
     private final List<Player> players;
     private final List<Player> spectators;
     private final Board board;
@@ -26,6 +28,7 @@ public class Game {
 
     public Game(String roomCode, List<Player> players, Board board) {
         this.roomCode = roomCode;
+        this.activeGameId = UUID.randomUUID();
         this.players = players;
         this.spectators = new ArrayList<>();
         this.board = board;
@@ -61,6 +64,7 @@ public class Game {
 
         board.reset();
         round++;
+        activeGameId = UUID.randomUUID();
         currentTurn = Symbol.X;
     }
 
@@ -95,6 +99,10 @@ public class Game {
 
     public String getRoomCode() {
         return roomCode;
+    }
+
+    public UUID getActiveGameId() {
+        return activeGameId;
     }
 
     public List<Player> getPlayers() {

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
@@ -26,5 +27,12 @@ public class GameRepositoryImpl implements GameRepository {
     @Override
     public Optional<Game> findByRoomCode(String roomCode) {
         return Optional.ofNullable(games.get(roomCode));
+    }
+
+    @Override
+    public Optional<Game> findByActiveGameId(UUID gameId) {
+        return games.values().stream()
+                .filter(game -> game.getActiveGameId().equals(gameId))
+                .findFirst();
     }
 }

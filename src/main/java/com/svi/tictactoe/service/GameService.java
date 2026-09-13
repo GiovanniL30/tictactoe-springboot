@@ -10,11 +10,13 @@ import com.svi.tictactoe.dto.response.GameStatusResponse;
 import com.svi.tictactoe.dto.response.JoinGameResponse;
 import com.svi.tictactoe.dto.response.PlayAgainResponse;
 
+import java.util.UUID;
+
 public interface GameService {
 
     CreateGameResponse createGame(CreateGameRequest requestBody);
 
-    BoardResponse placeMove(String roomCode, AddMoveRequest requestBody);
+    BoardResponse placeMove(UUID gameId, AddMoveRequest requestBody);
 
     PlayAgainResponse playAgain(String roomCode);
 

@@ -12,6 +12,7 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,11 +53,13 @@ class GameTest {
         game.join("Alice");
         game.join("Bob");
         game.placeMove(Symbol.X, 0, 0);
+        var firstGameId = game.getActiveGameId();
 
         game.startNextRound();
 
         assertNull(game.getBoard().getGrid()[0][0]);
         assertEquals(2, game.getRound());
+        assertNotEquals(firstGameId, game.getActiveGameId());
         assertEquals(Symbol.X, game.getCurrentTurn());
     }
 

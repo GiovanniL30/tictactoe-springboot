@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/games")
 public class GameController {
@@ -29,9 +31,9 @@ public class GameController {
         return ResponseEntity.status(HttpStatus.CREATED).body(gameService.createGame(requestBody));
     }
 
-    @PostMapping("/{roomCode}/move")
-    public ResponseEntity<BoardResponse> addMove(@PathVariable String roomCode, @Valid @RequestBody AddMoveRequest requestBody) {
-        return ResponseEntity.ok(gameService.placeMove(roomCode, requestBody));
+    @PostMapping("/{gameId}/move")
+    public ResponseEntity<BoardResponse> addMove(@PathVariable UUID gameId, @Valid @RequestBody AddMoveRequest requestBody) {
+        return ResponseEntity.ok(gameService.placeMove(gameId, requestBody));
     }
 
     @PostMapping("/{roomCode}/play-again")

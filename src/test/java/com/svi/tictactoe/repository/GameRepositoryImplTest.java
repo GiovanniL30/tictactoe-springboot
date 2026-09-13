@@ -20,6 +20,7 @@ class GameRepositoryImplTest {
         repository.save(game);
 
         assertSame(game, repository.findByRoomCode("ROOM").orElseThrow());
+        assertSame(game, repository.findByActiveGameId(game.getActiveGameId()).orElseThrow());
         assertTrue(repository.findByRoomCode("MISSING").isEmpty());
     }
 }

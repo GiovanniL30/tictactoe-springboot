@@ -21,6 +21,7 @@ import com.svi.tictactoe.util.CodeGenerator;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 @Service
 public class GameServiceImpl implements GameService {
@@ -40,18 +41,20 @@ public class GameServiceImpl implements GameService {
         return new CreateGameResponse(
                 SuccessMessage.GAME_CREATED.getMessage(),
                 game.getRoomCode(),
+                game.getActiveGameId(),
                 game.getPlayers().getFirst()
         );
     }
 
     @Override
-    public BoardResponse placeMove(String roomCode, AddMoveRequest requestBody) {
-        Game game = requireGame(roomCode);
+    public BoardResponse placeMove(UUID gameId, AddMoveRequest requestBody) {
+        Game game = requireGame(gameId);
         game.placeMove(requestBody.symbol(), requestBody.x(), requestBody.y());
         gameRepository.save(game);
 
         return new BoardResponse(
                 SuccessMessage.MOVE_PLACED.getMessage(),
+                game.getActiveGameId(),
                 game.getBoard().getGrid(),
                 game.getCurrentTurn()
         );
@@ -65,6 +68,8 @@ public class GameServiceImpl implements GameService {
 
         return new PlayAgainResponse(
                 SuccessMessage.NEW_ROUND_STARTED.getMessage(),
+                game.getRoomCode(),
+                game.getActiveGameId(),
                 game.getRound(),
                 game.getCurrentTurn(),
                 game.getPlayers()
@@ -98,6 +103,7 @@ public class GameServiceImpl implements GameService {
 
         return new BoardResponse(
                 SuccessMessage.BOARD_STATUS_RETRIEVED.getMessage(),
+                game.getActiveGameId(),
                 game.getBoard().getGrid(),
                 game.getCurrentTurn()
         );
@@ -118,6 +124,13 @@ public class GameServiceImpl implements GameService {
                 ));
     }
 
+    private Game requireGame(UUID gameId) {
+        return gameRepository.findByActiveGameId(gameId)
+                .orElseThrow(() -> new GameNotFoundException(
+                        ErrorMessage.GAME_ID_NOT_FOUND.format(gameId)
+                ));
+    }
+
     private String generateUniqueRoomCode() {
         String roomCode;
 
@@ -133,6 +146,7 @@ public class GameServiceImpl implements GameService {
                 game.getBoard().getGrid(),
                 game.getPlayers(),
                 game.getRoomCode(),
+                game.getActiveGameId(),
                 game.getRound(),
                 game.getCurrentTurn(),
                 game.getSpectators().size(),
