@@ -21,6 +21,7 @@ import com.svi.tictactoe.repository.cassandra.GameByRoomRepository;
 import com.svi.tictactoe.repository.cassandra.MoveByGameRepository;
 import com.svi.tictactoe.repository.cassandra.ParticipantByRoomRepository;
 import com.svi.tictactoe.repository.cassandra.RoomByCodeRepository;
+import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
 import org.junit.jupiter.api.Test;
 
@@ -114,6 +115,7 @@ class GameServiceImplTest {
     private static final class RepositoryHarness {
 
         private final RoomByCodeRepository roomRepository = mock(RoomByCodeRepository.class);
+        private final RoomCatalogRepository roomCatalogRepository = mock(RoomCatalogRepository.class);
         private final GameByIdRepository gameByIdRepository = mock(GameByIdRepository.class);
         private final GameByRoomRepository gameByRoomRepository = mock(GameByRoomRepository.class);
         private final ParticipantByRoomRepository participantRepository = mock(ParticipantByRoomRepository.class);
@@ -185,6 +187,7 @@ class GameServiceImplTest {
         private GameService service() {
             return new GameServiceImpl(
                     roomRepository,
+                    roomCatalogRepository,
                     gameByIdRepository,
                     gameByRoomRepository,
                     participantRepository,
