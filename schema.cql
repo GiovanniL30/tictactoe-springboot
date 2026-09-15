@@ -69,3 +69,21 @@ CREATE TABLE IF NOT EXISTS moves_by_game (
     played_at timestamp,
     PRIMARY KEY (game_id, move_no)
 ) WITH CLUSTERING ORDER BY (move_no ASC);
+
+-- Fixed-partition catalog used to list distinct players by normalized name.
+CREATE TABLE IF NOT EXISTS player_catalog (
+    catalog_key text,
+    normalized_player_name text,
+    player_name text,
+    PRIMARY KEY (catalog_key, normalized_player_name)
+);
+
+-- Query-first projection of games played by one player.
+CREATE TABLE IF NOT EXISTS games_by_player (
+    normalized_player_name text,
+    game_id uuid,
+    room_code text,
+    symbol text,
+    won boolean,
+    PRIMARY KEY (normalized_player_name, game_id)
+);

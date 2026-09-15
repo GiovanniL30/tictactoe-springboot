@@ -33,6 +33,8 @@ public class GameServiceImpl implements GameService {
     private final GameByRoomRepository gameByRoomRepository;
     private final ParticipantByRoomRepository participantRepository;
     private final MoveByGameRepository moveRepository;
+    private final PlayerCatalogRepository playerCatalogRepository;
+    private final GameByPlayerRepository gameByPlayerRepository;
 
     public GameServiceImpl(
             RoomByCodeRepository roomRepository,
@@ -40,13 +42,17 @@ public class GameServiceImpl implements GameService {
             GameByIdRepository gameByIdRepository,
             GameByRoomRepository gameByRoomRepository,
             ParticipantByRoomRepository participantRepository,
-            MoveByGameRepository moveRepository) {
+            MoveByGameRepository moveRepository,
+            PlayerCatalogRepository playerCatalogRepository,
+            GameByPlayerRepository gameByPlayerRepository) {
         this.roomRepository = roomRepository;
         this.roomCatalogRepository = roomCatalogRepository;
         this.gameByIdRepository = gameByIdRepository;
         this.gameByRoomRepository = gameByRoomRepository;
         this.participantRepository = participantRepository;
         this.moveRepository = moveRepository;
+        this.playerCatalogRepository = playerCatalogRepository;
+        this.gameByPlayerRepository = gameByPlayerRepository;
     }
 
     @Override
@@ -85,6 +91,7 @@ public class GameServiceImpl implements GameService {
         gameByIdRepository.save(game);
         gameByRoomRepository.save(gameByRoom);
         participantRepository.save(creator);
+        syncGameForPlayers(game, List.of(creator));
 
         return new CreateGameResponse(
                 SuccessMessage.GAME_CREATED.getMessage(),
@@ -144,6 +151,7 @@ public class GameServiceImpl implements GameService {
         ));
 
         RoomByCodeEntity room = requireRoom(game.getRoomCode());
+        boolean roundCompleted = false;
 
         if (hasWinner(board, currentTurn)) {
             game.setStatus(GameStatus.COMPLETED.name());
@@ -153,18 +161,25 @@ public class GameServiceImpl implements GameService {
             movingPlayer.setScore((movingPlayer.getScore() == null ? 0 : movingPlayer.getScore()) + 1);
             participantRepository.save(movingPlayer);
             finishRound(room);
+            roundCompleted = true;
         } else if (board.stream().noneMatch(String::isBlank)) {
             game.setStatus(GameStatus.COMPLETED.name());
             game.setWinner("DRAW");
             game.setCurrentTurn(null);
             room.setStatus(GameStatus.COMPLETED.name());
             finishRound(room);
+            roundCompleted = true;
         } else {
             game.setCurrentTurn(currentTurn == Symbol.X ? Symbol.O.name() : Symbol.X.name());
         }
 
         gameByIdRepository.save(game);
         roomRepository.save(room);
+
+        if (roundCompleted) {
+            syncGameForPlayers(game, participants);
+        }
+
         return GameMapper.toBoardResponse(game, SuccessMessage.MOVE_PLACED.getMessage());
     }
 
@@ -185,6 +200,7 @@ public class GameServiceImpl implements GameService {
         }
 
         finishRound(room);
+        syncGameForPlayers(previousGame, participants);
 
         UUID nextGameId = UUID.randomUUID();
         int nextRound = room.getCurrentRound() + 1;
@@ -208,6 +224,7 @@ public class GameServiceImpl implements GameService {
         roomRepository.save(room);
         gameByIdRepository.save(nextGame);
         gameByRoomRepository.save(nextGameByRoom);
+        syncGameForPlayers(nextGame, participants);
 
         return RoomMapper.toPlayAgainResponse(room, SuccessMessage.NEW_ROUND_STARTED.getMessage());
     }
@@ -238,13 +255,19 @@ public class GameServiceImpl implements GameService {
 
         participantRepository.save(participant);
 
-        if (type == PlayerType.PLAYER && playerCount + 1 == REQUIRED_PLAYER_COUNT) {
-            room.setStatus(GameStatus.IN_PROGRESS.name());
-            roomRepository.save(room);
+        if (type == PlayerType.PLAYER) {
             GameByIdEntity game = requireGame(room.getActiveGameId());
-            game.setStatus(GameStatus.IN_PROGRESS.name());
-            gameByIdRepository.save(game);
-            updateRoundStatus(roomCode, room.getCurrentRound(), GameStatus.IN_PROGRESS);
+            if (playerCount + 1 == REQUIRED_PLAYER_COUNT) {
+                room.setStatus(GameStatus.IN_PROGRESS.name());
+                roomRepository.save(room);
+                game.setStatus(GameStatus.IN_PROGRESS.name());
+                gameByIdRepository.save(game);
+                updateRoundStatus(roomCode, room.getCurrentRound(), GameStatus.IN_PROGRESS);
+            }
+
+            List<ParticipantByRoomEntity> currentPlayers = new ArrayList<>(participants);
+            currentPlayers.add(participant);
+            syncGameForPlayers(game, currentPlayers);
         }
 
         String message = type == PlayerType.PLAYER ? SuccessMessage.PLAYER_JOINED.getMessage() : SuccessMessage.SPECTATOR_JOINED.getMessage();
@@ -275,10 +298,15 @@ public class GameServiceImpl implements GameService {
 
         GameInfoResponse response = toGameInfoResponse(activeGame, participants, SuccessMessage.GAME_DELETED.getMessage());
 
-        for (GameByRoomEntity round : gameByRoomRepository.findAllByRoomCode(roomCode)) {
+        List<GameByRoomEntity> rounds = gameByRoomRepository.findAllByRoomCode(roomCode);
+        for (GameByRoomEntity round : rounds) {
             moveRepository.deleteAllByGameId(round.getGameId());
             gameByIdRepository.deleteById(round.getGameId());
         }
+
+        participants.stream()
+                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
+                .forEach(participant -> removeRoomFromPlayerHistory(participant, rounds));
 
         gameByRoomRepository.deleteAllByRoomCode(roomCode);
         participantRepository.deleteAllByRoomCode(roomCode);
@@ -330,6 +358,44 @@ public class GameServiceImpl implements GameService {
                     round.setStatus(status.name());
                     gameByRoomRepository.save(round);
                 });
+    }
+
+    private void syncGameForPlayers(GameByIdEntity game, List<ParticipantByRoomEntity> participants) {
+        participants.stream()
+                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
+                .forEach(participant -> {
+                    playerCatalogRepository.save(new PlayerCatalogEntity(
+                            PlayerCatalogEntity.ALL_PLAYERS,
+                            participant.getNormalizedPlayerName(),
+                            participant.getPlayerName()
+                    ));
+
+                    gameByPlayerRepository.save(new GameByPlayerEntity(
+                            participant.getNormalizedPlayerName(),
+                            game.getGameId(),
+                            game.getRoomCode(),
+                            participant.getSymbol(),
+                            game.getWinner() != null
+                                    && normalizeName(game.getWinner()).equals(participant.getNormalizedPlayerName())
+                    ));
+                });
+    }
+
+    private void removeRoomFromPlayerHistory(
+            ParticipantByRoomEntity player,
+            List<GameByRoomEntity> rounds) {
+        rounds.forEach(round -> gameByPlayerRepository.deleteByNormalizedPlayerNameAndGameId(
+                player.getNormalizedPlayerName(),
+                round.getGameId()
+        ));
+
+        if (gameByPlayerRepository.findAllByNormalizedPlayerName(player.getNormalizedPlayerName()).isEmpty()) {
+            playerCatalogRepository.delete(new PlayerCatalogEntity(
+                    PlayerCatalogEntity.ALL_PLAYERS,
+                    player.getNormalizedPlayerName(),
+                    player.getPlayerName()
+            ));
+        }
     }
 
     private ParticipantByRoomEntity findPlayerBySymbol(List<ParticipantByRoomEntity> participants, Symbol symbol) {

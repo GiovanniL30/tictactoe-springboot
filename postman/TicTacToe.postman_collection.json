@@ -20,6 +20,11 @@
       "key": "gameId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "playerName",
+      "value": "Gio",
+      "type": "string"
     }
   ],
   "item": [
@@ -274,6 +279,86 @@
         },
         "description": "Starts the next round and replaces the gameId collection variable."
       }
+    },
+    {
+      "name": "Players",
+      "item": [
+        {
+          "name": "Get All Players",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains players', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.totalPlayers).to.be.a('number');",
+                  "    pm.expect(response.players).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/players",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "players"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Player Games",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains player games', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.playerName).to.be.a('string');",
+                  "    pm.expect(response.totalGames).to.be.a('number');",
+                  "    pm.expect(response.games).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/players/{{playerName}}/games",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "players",
+                "{{playerName}}",
+                "games"
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "name": "History",

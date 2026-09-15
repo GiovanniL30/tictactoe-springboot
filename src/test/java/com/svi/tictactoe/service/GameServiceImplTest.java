@@ -17,9 +17,11 @@ import com.svi.tictactoe.entity.MoveByGameEntity;
 import com.svi.tictactoe.entity.ParticipantByRoomEntity;
 import com.svi.tictactoe.entity.RoomByCodeEntity;
 import com.svi.tictactoe.repository.cassandra.GameByIdRepository;
+import com.svi.tictactoe.repository.cassandra.GameByPlayerRepository;
 import com.svi.tictactoe.repository.cassandra.GameByRoomRepository;
 import com.svi.tictactoe.repository.cassandra.MoveByGameRepository;
 import com.svi.tictactoe.repository.cassandra.ParticipantByRoomRepository;
+import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
 import com.svi.tictactoe.repository.cassandra.RoomByCodeRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
@@ -120,6 +122,8 @@ class GameServiceImplTest {
         private final GameByRoomRepository gameByRoomRepository = mock(GameByRoomRepository.class);
         private final ParticipantByRoomRepository participantRepository = mock(ParticipantByRoomRepository.class);
         private final MoveByGameRepository moveRepository = mock(MoveByGameRepository.class);
+        private final PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
+        private final GameByPlayerRepository gameByPlayerRepository = mock(GameByPlayerRepository.class);
 
         private final Map<String, RoomByCodeEntity> rooms = new HashMap<>();
         private final Map<UUID, GameByIdEntity> games = new HashMap<>();
@@ -191,7 +195,9 @@ class GameServiceImplTest {
                     gameByIdRepository,
                     gameByRoomRepository,
                     participantRepository,
-                    moveRepository
+                    moveRepository,
+                    playerCatalogRepository,
+                    gameByPlayerRepository
             );
         }
     }
