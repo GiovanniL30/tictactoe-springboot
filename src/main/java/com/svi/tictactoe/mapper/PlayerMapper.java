@@ -30,10 +30,10 @@ public final class PlayerMapper {
     public static ParticipantSummary summarize(List<ParticipantByRoomEntity> participants) {
         List<ParticipantResponse> players = participants.stream()
                 .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
-                .sorted(Comparator.comparingInt(participant ->
-                        Symbol.fromString(participant.getSymbol()).ordinal()))
+                .sorted(Comparator.comparingInt(participant -> Symbol.fromString(participant.getSymbol()).ordinal()))
                 .map(PlayerMapper::toParticipantResponse)
                 .toList();
+
         int spectatorCount = (int) participants.stream()
                 .filter(participant -> PlayerType.SPECTATOR.name().equals(participant.getPlayerType()))
                 .count();

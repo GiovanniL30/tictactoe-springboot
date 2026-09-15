@@ -28,11 +28,7 @@ public final class GameMapper {
         );
     }
 
-    public static GameInfoResponse toGameInfoResponse(
-            GameByIdEntity entity,
-            List<ParticipantResponse> players,
-            int spectatorCount,
-            String message) {
+    public static GameInfoResponse toGameInfoResponse(GameByIdEntity entity, List<ParticipantResponse> players, int spectatorCount, String message) {
         return new GameInfoResponse(
                 players,
                 entity.getRoomCode(),
@@ -57,12 +53,14 @@ public final class GameMapper {
         }
 
         int cellCount = BOARD_SIZE * BOARD_SIZE;
+
         for (int index = 0; index < Math.min(board.size(), cellCount); index++) {
             String cell = board.get(index);
             if (cell != null && !cell.isBlank()) {
                 grid[index / BOARD_SIZE][index % BOARD_SIZE] = Symbol.fromString(cell);
             }
         }
+
         return grid;
     }
 

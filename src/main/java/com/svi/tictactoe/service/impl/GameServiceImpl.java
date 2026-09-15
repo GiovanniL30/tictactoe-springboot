@@ -16,7 +16,10 @@ import com.svi.tictactoe.util.CodeGenerator;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class GameServiceImpl implements GameService {
@@ -329,9 +332,7 @@ public class GameServiceImpl implements GameService {
                 });
     }
 
-    private ParticipantByRoomEntity findPlayerBySymbol(
-            List<ParticipantByRoomEntity> participants,
-            Symbol symbol) {
+    private ParticipantByRoomEntity findPlayerBySymbol(List<ParticipantByRoomEntity> participants, Symbol symbol) {
         return participants.stream()
                 .filter(participant -> symbol.name().equals(participant.getSymbol()))
                 .findFirst()
