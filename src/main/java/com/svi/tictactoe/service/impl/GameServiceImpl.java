@@ -25,6 +25,7 @@ public class GameServiceImpl implements GameService {
     private static final int REQUIRED_PLAYER_COUNT = 2;
 
     private final RoomByCodeRepository roomRepository;
+    private final RoomCatalogRepository roomCatalogRepository;
     private final GameByIdRepository gameByIdRepository;
     private final GameByRoomRepository gameByRoomRepository;
     private final ParticipantByRoomRepository participantRepository;
@@ -32,11 +33,13 @@ public class GameServiceImpl implements GameService {
 
     public GameServiceImpl(
             RoomByCodeRepository roomRepository,
+            RoomCatalogRepository roomCatalogRepository,
             GameByIdRepository gameByIdRepository,
             GameByRoomRepository gameByRoomRepository,
             ParticipantByRoomRepository participantRepository,
             MoveByGameRepository moveRepository) {
         this.roomRepository = roomRepository;
+        this.roomCatalogRepository = roomCatalogRepository;
         this.gameByIdRepository = gameByIdRepository;
         this.gameByRoomRepository = gameByRoomRepository;
         this.participantRepository = participantRepository;
@@ -75,6 +78,7 @@ public class GameServiceImpl implements GameService {
         );
 
         roomRepository.save(room);
+        roomCatalogRepository.save(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, roomCode));
         gameByIdRepository.save(game);
         gameByRoomRepository.save(gameByRoom);
         participantRepository.save(creator);
@@ -275,6 +279,7 @@ public class GameServiceImpl implements GameService {
 
         gameByRoomRepository.deleteAllByRoomCode(roomCode);
         participantRepository.deleteAllByRoomCode(roomCode);
+        roomCatalogRepository.delete(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, roomCode));
         roomRepository.deleteById(roomCode);
 
         return response;
