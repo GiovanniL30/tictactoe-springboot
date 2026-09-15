@@ -28,19 +28,23 @@ public class GameByIdEntity {
     @Column("winner")
     private String winner;
 
+    @Column("move_count")
+    private Integer moveCount;
+
     @Column("board")
     private List<String> board;
 
     public GameByIdEntity() {
     }
 
-    public GameByIdEntity(UUID gameId, String roomCode, Integer roundNo, String status, String currentTurn, String winner, List<String> board) {
+    public GameByIdEntity(UUID gameId, String roomCode, Integer roundNo, String status, String currentTurn, String winner, Integer moveCount, List<String> board) {
         this.gameId = gameId;
         this.roomCode = roomCode;
         this.roundNo = roundNo;
         this.status = status;
         this.currentTurn = currentTurn;
         this.winner = winner;
+        this.moveCount = moveCount;
         this.board = board;
     }
 
@@ -90,6 +94,14 @@ public class GameByIdEntity {
 
     public void setWinner(String winner) {
         this.winner = winner;
+    }
+
+    public Integer getMoveCount() {
+        return moveCount;
+    }
+
+    public void setMoveCount(Integer moveCount) {
+        this.moveCount = moveCount;
     }
 
     public List<String> getBoard() {
