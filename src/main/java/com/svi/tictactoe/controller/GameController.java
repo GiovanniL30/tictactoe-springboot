@@ -5,7 +5,7 @@ import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
 import com.svi.tictactoe.dto.response.BoardResponse;
 import com.svi.tictactoe.dto.response.CreateGameResponse;
-import com.svi.tictactoe.dto.response.GameStatusResponse;
+import com.svi.tictactoe.dto.response.GameInfoResponse;
 import com.svi.tictactoe.dto.response.JoinGameResponse;
 import com.svi.tictactoe.dto.response.PlayAgainResponse;
 import com.svi.tictactoe.service.GameService;
@@ -47,8 +47,8 @@ public class GameController {
     }
 
     @GetMapping("/{roomCode}")
-    public ResponseEntity<GameStatusResponse> checkGameStatus(@PathVariable String roomCode) {
-        return ResponseEntity.ok(gameService.getGameStatus(roomCode));
+    public ResponseEntity<GameInfoResponse> getGameInfo(@PathVariable String roomCode) {
+        return ResponseEntity.ok(gameService.getGameInfo(roomCode));
     }
 
     @GetMapping("/{roomCode}/board")
@@ -56,9 +56,8 @@ public class GameController {
         return ResponseEntity.ok(gameService.getBoardStatus(roomCode));
     }
 
-
     @DeleteMapping("/{roomCode}")
-    public ResponseEntity<GameStatusResponse> deleteRoom(@PathVariable String roomCode) {
+    public ResponseEntity<GameInfoResponse> deleteRoom(@PathVariable String roomCode) {
         return ResponseEntity.ok(gameService.deleteGame(roomCode));
     }
 
