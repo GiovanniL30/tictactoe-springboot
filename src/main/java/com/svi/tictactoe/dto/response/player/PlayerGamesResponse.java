@@ -1,4 +1,4 @@
-package com.svi.tictactoe.dto.response;
+package com.svi.tictactoe.dto.response.player;
 
 import java.util.List;
 

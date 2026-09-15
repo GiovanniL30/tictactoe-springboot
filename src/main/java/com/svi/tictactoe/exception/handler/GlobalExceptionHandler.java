@@ -2,8 +2,8 @@ package com.svi.tictactoe.exception.handler;
 
 import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.ErrorResponse;
-import com.svi.tictactoe.dto.response.ValidationErrorResponse;
+import com.svi.tictactoe.dto.response.error.ErrorResponse;
+import com.svi.tictactoe.dto.response.error.ValidationErrorResponse;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

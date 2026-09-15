@@ -1,4 +1,4 @@
-package com.svi.tictactoe.dto.response;
+package com.svi.tictactoe.dto.response.game;
 
 import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.Symbol;

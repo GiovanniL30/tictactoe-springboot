@@ -1,6 +1,6 @@
 package com.svi.tictactoe.exception.handler;
 
-import com.svi.tictactoe.dto.response.ErrorResponse;
+import com.svi.tictactoe.dto.response.error.ErrorResponse;
 import com.svi.tictactoe.exception.ApiException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

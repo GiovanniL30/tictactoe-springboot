@@ -1,8 +1,8 @@
 package com.svi.tictactoe.service;
 
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.PlayerGamesResponse;
-import com.svi.tictactoe.dto.response.PlayersResponse;
+import com.svi.tictactoe.dto.response.player.PlayerGamesResponse;
+import com.svi.tictactoe.dto.response.player.PlayersResponse;
 import com.svi.tictactoe.entity.GameByPlayerEntity;
 import com.svi.tictactoe.entity.PlayerCatalogEntity;
 import com.svi.tictactoe.exception.PlayerNotFoundException;

@@ -1,7 +1,7 @@
 package com.svi.tictactoe.service;
 
-import com.svi.tictactoe.dto.response.PlayerGamesResponse;
-import com.svi.tictactoe.dto.response.PlayersResponse;
+import com.svi.tictactoe.dto.response.player.PlayerGamesResponse;
+import com.svi.tictactoe.dto.response.player.PlayersResponse;
 
 public interface PlayerHistoryService {
 

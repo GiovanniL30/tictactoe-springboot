@@ -4,7 +4,7 @@ import com.svi.tictactoe.constants.*;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.*;
+import com.svi.tictactoe.dto.response.game.*;
 import com.svi.tictactoe.entity.*;
 import com.svi.tictactoe.exception.*;
 import com.svi.tictactoe.mapper.GameMapper;

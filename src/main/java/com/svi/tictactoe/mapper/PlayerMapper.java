@@ -2,8 +2,8 @@ package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.JoinGameResponse;
-import com.svi.tictactoe.dto.response.ParticipantResponse;
+import com.svi.tictactoe.dto.response.game.JoinGameResponse;
+import com.svi.tictactoe.dto.response.player.ParticipantResponse;
 import com.svi.tictactoe.entity.ParticipantByRoomEntity;
 
 import java.util.Comparator;

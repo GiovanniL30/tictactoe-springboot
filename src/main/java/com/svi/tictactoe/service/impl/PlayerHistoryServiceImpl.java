@@ -2,10 +2,10 @@ package com.svi.tictactoe.service.impl;
 
 import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.PlayerGameSummaryResponse;
-import com.svi.tictactoe.dto.response.PlayerGamesResponse;
-import com.svi.tictactoe.dto.response.PlayerSummaryResponse;
-import com.svi.tictactoe.dto.response.PlayersResponse;
+import com.svi.tictactoe.dto.response.player.PlayerGameSummaryResponse;
+import com.svi.tictactoe.dto.response.player.PlayerGamesResponse;
+import com.svi.tictactoe.dto.response.player.PlayerSummaryResponse;
+import com.svi.tictactoe.dto.response.player.PlayersResponse;
 import com.svi.tictactoe.entity.GameByPlayerEntity;
 import com.svi.tictactoe.entity.PlayerCatalogEntity;
 import com.svi.tictactoe.exception.PlayerNotFoundException;

@@ -1,7 +1,7 @@
 package com.svi.tictactoe.service;
 
-import com.svi.tictactoe.dto.response.GameMoveHistoryResponse;
-import com.svi.tictactoe.dto.response.RoomHistoriesResponse;
+import com.svi.tictactoe.dto.response.history.GameMoveHistoryResponse;
+import com.svi.tictactoe.dto.response.history.RoomHistoriesResponse;
 
 import java.util.UUID;
 

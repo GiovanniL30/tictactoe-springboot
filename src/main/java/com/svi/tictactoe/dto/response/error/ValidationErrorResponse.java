@@ -1,4 +1,4 @@
-package com.svi.tictactoe.dto.response;
+package com.svi.tictactoe.dto.response.error;
 
 import java.util.List;
 

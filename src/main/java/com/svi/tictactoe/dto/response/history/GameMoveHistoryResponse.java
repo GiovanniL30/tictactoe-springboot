@@ -1,4 +1,4 @@
-package com.svi.tictactoe.dto.response;
+package com.svi.tictactoe.dto.response.history;
 
 import java.util.List;
 import java.util.UUID;

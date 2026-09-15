@@ -2,9 +2,9 @@ package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.BoardResponse;
-import com.svi.tictactoe.dto.response.GameInfoResponse;
-import com.svi.tictactoe.dto.response.ParticipantResponse;
+import com.svi.tictactoe.dto.response.game.BoardResponse;
+import com.svi.tictactoe.dto.response.game.GameInfoResponse;
+import com.svi.tictactoe.dto.response.player.ParticipantResponse;
 import com.svi.tictactoe.entity.GameByIdEntity;
 
 import java.util.ArrayList;

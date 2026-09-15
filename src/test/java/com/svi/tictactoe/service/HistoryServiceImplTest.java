@@ -2,8 +2,8 @@ package com.svi.tictactoe.service;
 
 import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.GameMoveHistoryResponse;
-import com.svi.tictactoe.dto.response.RoomHistoriesResponse;
+import com.svi.tictactoe.dto.response.history.GameMoveHistoryResponse;
+import com.svi.tictactoe.dto.response.history.RoomHistoriesResponse;
 import com.svi.tictactoe.entity.GameByIdEntity;
 import com.svi.tictactoe.entity.GameByRoomEntity;
 import com.svi.tictactoe.entity.MoveByGameEntity;

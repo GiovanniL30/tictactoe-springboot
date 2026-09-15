@@ -1,7 +1,7 @@
 package com.svi.tictactoe.controller;
 
-import com.svi.tictactoe.dto.response.GameMoveHistoryResponse;
-import com.svi.tictactoe.dto.response.RoomHistoriesResponse;
+import com.svi.tictactoe.dto.response.history.GameMoveHistoryResponse;
+import com.svi.tictactoe.dto.response.history.RoomHistoriesResponse;
 import com.svi.tictactoe.service.HistoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
