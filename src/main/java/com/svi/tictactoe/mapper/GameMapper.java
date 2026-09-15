@@ -1,13 +1,14 @@
 package com.svi.tictactoe.mapper;
 
+import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.BoardResponse;
-import com.svi.tictactoe.dto.response.CreateGameResponse;
-import com.svi.tictactoe.dto.response.GameStatusResponse;
+import com.svi.tictactoe.dto.response.GameInfoResponse;
+import com.svi.tictactoe.dto.response.ParticipantResponse;
 import com.svi.tictactoe.entity.GameByIdEntity;
-import com.svi.tictactoe.model.Game;
-import com.svi.tictactoe.model.Player;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class GameMapper {
@@ -17,62 +18,40 @@ public final class GameMapper {
     private GameMapper() {
     }
 
-    public static CreateGameResponse toCreateGameResponse(Game game, String message) {
-        return new CreateGameResponse(
-                message,
-                game.getRoomCode(),
-                game.getActiveGameId(),
-                game.getPlayers().getFirst()
-        );
-    }
-
-    public static BoardResponse toBoardResponse(Game game, String message) {
-        return new BoardResponse(
-                message,
-                game.getActiveGameId(),
-                game.getBoard().getGrid(),
-                game.getCurrentTurn()
-        );
-    }
-
     public static BoardResponse toBoardResponse(GameByIdEntity entity, String message) {
         return new BoardResponse(
                 message,
                 entity.getGameId(),
                 toGrid(entity.getBoard()),
-                toSymbol(entity.getCurrentTurn())
+                toSymbol(entity.getCurrentTurn()),
+                toGameStatus(entity.getStatus())
         );
     }
 
-    public static GameStatusResponse toGameStatusResponse(Game game, String message) {
-        return new GameStatusResponse(
-                game.getBoard().getGrid(),
-                game.getPlayers(),
-                game.getRoomCode(),
-                game.getActiveGameId(),
-                game.getRound(),
-                game.getCurrentTurn(),
-                game.getSpectators().size(),
-                message
-        );
-    }
-
-    public static GameStatusResponse toGameStatusResponse(GameByIdEntity entity, List<Player> players, int spectatorCount, String message) {
-        return new GameStatusResponse(
-                toGrid(entity.getBoard()),
+    public static GameInfoResponse toGameInfoResponse(
+            GameByIdEntity entity,
+            List<ParticipantResponse> players,
+            int spectatorCount,
+            String message) {
+        return new GameInfoResponse(
                 players,
                 entity.getRoomCode(),
                 entity.getGameId(),
                 entity.getRoundNo(),
                 toSymbol(entity.getCurrentTurn()),
                 spectatorCount,
+                toGameStatus(entity.getStatus()),
+                entity.getWinner(),
                 message
         );
     }
 
-    private static Symbol[][] toGrid(List<String> board) {
-        Symbol[][] grid = new Symbol[BOARD_SIZE][BOARD_SIZE];
+    public static List<String> emptyBoard() {
+        return new ArrayList<>(Collections.nCopies(BOARD_SIZE * BOARD_SIZE, ""));
+    }
 
+    public static Symbol[][] toGrid(List<String> board) {
+        Symbol[][] grid = new Symbol[BOARD_SIZE][BOARD_SIZE];
         if (board == null) {
             return grid;
         }
@@ -84,11 +63,14 @@ public final class GameMapper {
                 grid[index / BOARD_SIZE][index % BOARD_SIZE] = Symbol.fromString(cell);
             }
         }
-
         return grid;
     }
 
     private static Symbol toSymbol(String value) {
         return value == null || value.isBlank() ? null : Symbol.fromString(value);
+    }
+
+    private static GameStatus toGameStatus(String value) {
+        return GameStatus.valueOf(value);
     }
 }
