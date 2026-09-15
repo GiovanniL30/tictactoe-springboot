@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -56,11 +57,13 @@ public class HistoryServiceImpl implements HistoryService {
                 .sorted(Comparator.comparing(RoomCatalogEntity::getRoomCode))
                 .map(RoomCatalogEntity::getRoomCode)
                 .map(roomRepository::findById)
-                .flatMap(java.util.Optional::stream)
+                .flatMap(Optional::stream)
                 .toList();
+
         List<RoomHistorySummaryResponse> summaries = rooms.stream()
                 .map(this::toRoomHistorySummary)
                 .toList();
+
         int totalGames = summaries.stream()
                 .mapToInt(summary -> summary.games().size())
                 .sum();
@@ -75,10 +78,12 @@ public class HistoryServiceImpl implements HistoryService {
                 .sorted(Comparator.comparing(MoveByGameEntity::getMoveNo))
                 .map(this::toMoveResponse)
                 .toList();
+
         GameResultResponse result = new GameResultResponse(
                 GameStatus.valueOf(game.getStatus()),
                 game.getWinner()
         );
+
         return new GameMoveHistoryResponse(
                 game.getGameId(),
                 game.getRoomCode(),
@@ -103,6 +108,7 @@ public class HistoryServiceImpl implements HistoryService {
 
     private GameHistorySummaryResponse toGameHistorySummary(GameByRoomEntity gameByRoom) {
         GameByIdEntity game = requireGame(gameByRoom.getGameId());
+
         return new GameHistorySummaryResponse(
                 game.getGameId(),
                 GameStatus.valueOf(game.getStatus()),
