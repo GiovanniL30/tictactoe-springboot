@@ -6,6 +6,28 @@ WITH replication = {
 
 USE tictactoe;
 
+-- One row per room. Used by every room-code endpoint and room-code uniqueness checks.
+CREATE TABLE IF NOT EXISTS rooms_by_code (
+    room_code text PRIMARY KEY,
+    active_game_id uuid,
+    current_round int,
+    status text,
+    created_at timestamp
+);
+
+-- One row per round. Used by the move endpoint, which receives a game id.
+CREATE TABLE IF NOT EXISTS games_by_id (
+    game_id uuid PRIMARY KEY,
+    room_code text,
+    round_no int,
+    status text,
+    current_turn text,
+    winner text,
+    move_count int,
+    board list<text>
+);
+
+-- Round history for a room. Used when advancing or deleting a room.
 CREATE TABLE IF NOT EXISTS games_by_room (
     room_code text,
     round_no int,
@@ -16,16 +38,19 @@ CREATE TABLE IF NOT EXISTS games_by_room (
     PRIMARY KEY (room_code, round_no)
 ) WITH CLUSTERING ORDER BY (round_no ASC);
 
-CREATE TABLE IF NOT EXISTS games_by_id (
-    game_id uuid PRIMARY KEY,
+-- Room-lifetime membership. Scores and spectators survive game-id changes.
+CREATE TABLE IF NOT EXISTS participants_by_room (
     room_code text,
-    round_no int,
-    status text,
-    current_turn text,
-    winner text,
-    board list<text>
+    normalized_player_name text,
+    player_name text,
+    player_type text,
+    symbol text,
+    score int,
+    joined_at timestamp,
+    PRIMARY KEY (room_code, normalized_player_name)
 );
 
+-- Immutable move history for one round.
 CREATE TABLE IF NOT EXISTS moves_by_game (
     game_id uuid,
     move_no int,
@@ -37,14 +62,3 @@ CREATE TABLE IF NOT EXISTS moves_by_game (
     played_at timestamp,
     PRIMARY KEY (game_id, move_no)
 ) WITH CLUSTERING ORDER BY (move_no ASC);
-
-CREATE TABLE IF NOT EXISTS games_by_player (
-    normalized_player_name text,
-    joined_at timestamp,
-    game_id uuid,
-    room_code text,
-    player_name text,
-    symbol text,
-    result text,
-    PRIMARY KEY (normalized_player_name, joined_at, game_id)
-) WITH CLUSTERING ORDER BY (joined_at DESC, game_id ASC);
