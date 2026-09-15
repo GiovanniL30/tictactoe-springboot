@@ -6,6 +6,7 @@ public enum ErrorMessage {
     GAME_NOT_FOUND("Game with room code '%s' was not found."),
     GAME_ID_NOT_FOUND("Game with id '%s' was not found."),
     GAME_NOT_STARTED("Game requires two players before it can start."),
+    GAME_ALREADY_FINISHED("This round is already finished. Start a new round to continue."),
     PLAYER_ALREADY_EXISTS("Participant name '%s' is already in use."),
     PLAYER_NOT_FOUND("Player '%s' was not found."),
     INVALID_TURN("It is player '%s''s turn."),

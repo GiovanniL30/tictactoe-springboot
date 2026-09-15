@@ -7,7 +7,7 @@ public enum SuccessMessage {
     NEW_ROUND_STARTED("New round started."),
     PLAYER_JOINED("Player joined successfully."),
     SPECTATOR_JOINED("Game already has two players. Joined as spectator."),
-    GAME_STATUS_RETRIEVED("Game status retrieved successfully."),
+    GAME_INFO_RETRIEVED("Game information retrieved successfully."),
     BOARD_STATUS_RETRIEVED("Latest Board Grid"),
     GAME_DELETED("Game deleted successfully.");
 
