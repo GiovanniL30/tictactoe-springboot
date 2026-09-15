@@ -6,7 +6,7 @@ import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
 import com.svi.tictactoe.dto.response.BoardResponse;
 import com.svi.tictactoe.dto.response.CreateGameResponse;
-import com.svi.tictactoe.dto.response.GameStatusResponse;
+import com.svi.tictactoe.dto.response.GameInfoResponse;
 import com.svi.tictactoe.dto.response.JoinGameResponse;
 import com.svi.tictactoe.dto.response.PlayAgainResponse;
 
@@ -22,10 +22,10 @@ public interface GameService {
 
     JoinGameResponse joinGame(String roomCode, JoinGameRequest requestBody);
 
-    GameStatusResponse getGameStatus(String roomCode);
+    GameInfoResponse getGameInfo(String roomCode);
 
     BoardResponse getBoardStatus(String roomCode);
 
-    GameStatusResponse deleteGame(String roomCode);
+    GameInfoResponse deleteGame(String roomCode);
 
 }

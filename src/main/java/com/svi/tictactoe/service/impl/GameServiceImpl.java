@@ -1,125 +1,409 @@
 package com.svi.tictactoe.service.impl;
 
-import com.svi.tictactoe.constants.ErrorMessage;
-import com.svi.tictactoe.constants.PlayerType;
-import com.svi.tictactoe.constants.SuccessMessage;
+import com.svi.tictactoe.constants.*;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.BoardResponse;
-import com.svi.tictactoe.dto.response.CreateGameResponse;
-import com.svi.tictactoe.dto.response.GameStatusResponse;
-import com.svi.tictactoe.dto.response.JoinGameResponse;
-import com.svi.tictactoe.dto.response.PlayAgainResponse;
-import com.svi.tictactoe.exception.GameNotFoundException;
+import com.svi.tictactoe.dto.response.*;
+import com.svi.tictactoe.entity.*;
+import com.svi.tictactoe.exception.*;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.RoomMapper;
-import com.svi.tictactoe.model.Board;
-import com.svi.tictactoe.model.Game;
-import com.svi.tictactoe.model.Player;
-import com.svi.tictactoe.repository.GameRepository;
+import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.util.CodeGenerator;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.*;
 
 @Service
 public class GameServiceImpl implements GameService {
 
-    private final GameRepository gameRepository;
+    private static final int BOARD_SIZE = 3;
+    private static final int REQUIRED_PLAYER_COUNT = 2;
 
-    public GameServiceImpl(GameRepository gameRepository) {
-        this.gameRepository = gameRepository;
+    private final RoomByCodeRepository roomRepository;
+    private final GameByIdRepository gameByIdRepository;
+    private final GameByRoomRepository gameByRoomRepository;
+    private final ParticipantByRoomRepository participantRepository;
+    private final MoveByGameRepository moveRepository;
+
+    public GameServiceImpl(
+            RoomByCodeRepository roomRepository,
+            GameByIdRepository gameByIdRepository,
+            GameByRoomRepository gameByRoomRepository,
+            ParticipantByRoomRepository participantRepository,
+            MoveByGameRepository moveRepository) {
+        this.roomRepository = roomRepository;
+        this.gameByIdRepository = gameByIdRepository;
+        this.gameByRoomRepository = gameByRoomRepository;
+        this.participantRepository = participantRepository;
+        this.moveRepository = moveRepository;
     }
 
     @Override
     public CreateGameResponse createGame(CreateGameRequest requestBody) {
-        Game game = new Game(generateUniqueRoomCode(), new ArrayList<>(), new Board());
-        game.join(requestBody.playerName());
-        gameRepository.save(game);
+        String roomCode = generateUniqueRoomCode();
+        UUID gameId = UUID.randomUUID();
+        Instant now = Instant.now();
 
-        return GameMapper.toCreateGameResponse(game, SuccessMessage.GAME_CREATED.getMessage());
+        RoomByCodeEntity room = new RoomByCodeEntity(roomCode, gameId, 1, GameStatus.WAITING_FOR_PLAYERS.name(), now);
+
+        GameByIdEntity game = new GameByIdEntity(
+                gameId,
+                roomCode,
+                1,
+                GameStatus.WAITING_FOR_PLAYERS.name(),
+                Symbol.X.name(),
+                null,
+                0,
+                GameMapper.emptyBoard()
+        );
+
+        GameByRoomEntity gameByRoom = new GameByRoomEntity(roomCode, 1, gameId, GameStatus.WAITING_FOR_PLAYERS.name(), now, null);
+
+        ParticipantByRoomEntity creator = new ParticipantByRoomEntity(
+                roomCode,
+                normalizeName(requestBody.playerName()),
+                requestBody.playerName(),
+                PlayerType.PLAYER.name(),
+                Symbol.X.name(),
+                0,
+                now
+        );
+
+        roomRepository.save(room);
+        gameByIdRepository.save(game);
+        gameByRoomRepository.save(gameByRoom);
+        participantRepository.save(creator);
+
+        return new CreateGameResponse(
+                SuccessMessage.GAME_CREATED.getMessage(),
+                roomCode,
+                gameId,
+                PlayerMapper.toParticipantResponse(creator)
+        );
     }
 
     @Override
     public BoardResponse placeMove(UUID gameId, AddMoveRequest requestBody) {
-        Game game = requireGame(gameId);
-        game.placeMove(requestBody.symbol(), requestBody.x(), requestBody.y());
-        gameRepository.save(game);
+        GameByIdEntity game = requireActiveGame(gameId);
 
+        if (GameStatus.WAITING_FOR_PLAYERS.name().equals(game.getStatus())) {
+            throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
+        }
+
+        if (GameStatus.COMPLETED.name().equals(game.getStatus())) {
+            throw new GameAlreadyFinishedException(ErrorMessage.GAME_ALREADY_FINISHED.getMessage());
+        }
+
+        int x = requestBody.x();
+        int y = requestBody.y();
+
+        if (!isValidPosition(x, y)) {
+            throw new InvalidPositionException(ErrorMessage.INVALID_POSITION.format(x, y));
+        }
+
+        Symbol currentTurn = Symbol.fromString(game.getCurrentTurn());
+        if (requestBody.symbol() != currentTurn) {
+            throw new InvalidTurnException(ErrorMessage.INVALID_TURN.format(currentTurn));
+        }
+
+        List<String> board = mutableBoard(game.getBoard());
+        int boardIndex = x * BOARD_SIZE + y;
+        if (!board.get(boardIndex).isBlank()) {
+            throw new PositionAlreadyTakenException(ErrorMessage.POSITION_ALREADY_TAKEN.format(x, y));
+        }
+
+        board.set(boardIndex, currentTurn.name());
+        game.setBoard(board);
+        int moveNumber = game.getMoveCount() == null ? 1 : game.getMoveCount() + 1;
+        game.setMoveCount(moveNumber);
+
+        List<ParticipantByRoomEntity> participants = participantRepository.findAllByRoomCode(game.getRoomCode());
+        ParticipantByRoomEntity movingPlayer = findPlayerBySymbol(participants, currentTurn);
+
+        moveRepository.save(new MoveByGameEntity(
+                gameId,
+                moveNumber,
+                game.getRoomCode(),
+                movingPlayer.getPlayerName(),
+                currentTurn.name(),
+                x,
+                y,
+                Instant.now()
+        ));
+
+        RoomByCodeEntity room = requireRoom(game.getRoomCode());
+
+        if (hasWinner(board, currentTurn)) {
+            game.setStatus(GameStatus.COMPLETED.name());
+            game.setWinner(movingPlayer.getPlayerName());
+            game.setCurrentTurn(null);
+            room.setStatus(GameStatus.COMPLETED.name());
+            movingPlayer.setScore((movingPlayer.getScore() == null ? 0 : movingPlayer.getScore()) + 1);
+            participantRepository.save(movingPlayer);
+            finishRound(room);
+        } else if (board.stream().noneMatch(String::isBlank)) {
+            game.setStatus(GameStatus.COMPLETED.name());
+            game.setWinner("DRAW");
+            game.setCurrentTurn(null);
+            room.setStatus(GameStatus.COMPLETED.name());
+            finishRound(room);
+        } else {
+            game.setCurrentTurn(currentTurn == Symbol.X ? Symbol.O.name() : Symbol.X.name());
+        }
+
+        gameByIdRepository.save(game);
+        roomRepository.save(room);
         return GameMapper.toBoardResponse(game, SuccessMessage.MOVE_PLACED.getMessage());
     }
 
     @Override
     public PlayAgainResponse playAgain(String roomCode) {
-        Game game = requireGame(roomCode);
-        game.startNextRound();
-        gameRepository.save(game);
+        RoomByCodeEntity room = requireRoom(roomCode);
+        List<ParticipantByRoomEntity> participants = participantRepository.findAllByRoomCode(roomCode);
+        if (playerCount(participants) < REQUIRED_PLAYER_COUNT) {
+            throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
+        }
 
-        return RoomMapper.toPlayAgainResponse(game, SuccessMessage.NEW_ROUND_STARTED.getMessage());
+        Instant now = Instant.now();
+        GameByIdEntity previousGame = requireGame(room.getActiveGameId());
+        if (!GameStatus.COMPLETED.name().equals(previousGame.getStatus())) {
+            previousGame.setStatus(GameStatus.COMPLETED.name());
+            previousGame.setCurrentTurn(null);
+            gameByIdRepository.save(previousGame);
+        }
+
+        finishRound(room);
+
+        UUID nextGameId = UUID.randomUUID();
+        int nextRound = room.getCurrentRound() + 1;
+        room.setActiveGameId(nextGameId);
+        room.setCurrentRound(nextRound);
+        room.setStatus(GameStatus.IN_PROGRESS.name());
+
+        GameByIdEntity nextGame = new GameByIdEntity(
+                nextGameId,
+                roomCode,
+                nextRound,
+                GameStatus.IN_PROGRESS.name(),
+                Symbol.X.name(),
+                null,
+                0,
+                GameMapper.emptyBoard()
+        );
+
+        GameByRoomEntity nextGameByRoom = new GameByRoomEntity(roomCode, nextRound, nextGameId, GameStatus.IN_PROGRESS.name(), now, null);
+
+        roomRepository.save(room);
+        gameByIdRepository.save(nextGame);
+        gameByRoomRepository.save(nextGameByRoom);
+
+        return RoomMapper.toPlayAgainResponse(room, SuccessMessage.NEW_ROUND_STARTED.getMessage());
     }
 
     @Override
     public JoinGameResponse joinGame(String roomCode, JoinGameRequest requestBody) {
-        Game game = requireGame(roomCode);
-        Player participant = game.join(requestBody.playerName());
-        gameRepository.save(game);
+        RoomByCodeEntity room = requireRoom(roomCode);
+        List<ParticipantByRoomEntity> participants = participantRepository.findAllByRoomCode(roomCode);
 
-        String message = participant.getType() == PlayerType.PLAYER
-                ? SuccessMessage.PLAYER_JOINED.getMessage()
-                : SuccessMessage.SPECTATOR_JOINED.getMessage();
+        String normalizedName = normalizeName(requestBody.playerName());
+        if (participants.stream().anyMatch(participant -> participant.getNormalizedPlayerName().equals(normalizedName))) {
+            throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(requestBody.playerName()));
+        }
+
+        long playerCount = playerCount(participants);
+        PlayerType type = playerCount < REQUIRED_PLAYER_COUNT ? PlayerType.PLAYER : PlayerType.SPECTATOR;
+        Symbol symbol = type == PlayerType.SPECTATOR ? null : (playerCount == 0 ? Symbol.X : Symbol.O);
+
+        ParticipantByRoomEntity participant = new ParticipantByRoomEntity(
+                roomCode,
+                normalizedName,
+                requestBody.playerName(),
+                type.name(),
+                symbol == null ? null : symbol.name(),
+                0,
+                Instant.now()
+        );
+
+        participantRepository.save(participant);
+
+        if (type == PlayerType.PLAYER && playerCount + 1 == REQUIRED_PLAYER_COUNT) {
+            room.setStatus(GameStatus.IN_PROGRESS.name());
+            roomRepository.save(room);
+            GameByIdEntity game = requireGame(room.getActiveGameId());
+            game.setStatus(GameStatus.IN_PROGRESS.name());
+            gameByIdRepository.save(game);
+            updateRoundStatus(roomCode, room.getCurrentRound(), GameStatus.IN_PROGRESS);
+        }
+
+        String message = type == PlayerType.PLAYER ? SuccessMessage.PLAYER_JOINED.getMessage() : SuccessMessage.SPECTATOR_JOINED.getMessage();
 
         return PlayerMapper.toJoinGameResponse(participant, message);
     }
 
     @Override
-    public GameStatusResponse getGameStatus(String roomCode) {
-        return GameMapper.toGameStatusResponse(
-                requireGame(roomCode),
-                SuccessMessage.GAME_STATUS_RETRIEVED.getMessage()
-        );
+    public GameInfoResponse getGameInfo(String roomCode) {
+        RoomByCodeEntity room = requireRoom(roomCode);
+        GameByIdEntity game = requireGame(room.getActiveGameId());
+        List<ParticipantByRoomEntity> participants = participantRepository.findAllByRoomCode(roomCode);
+        return toGameInfoResponse(game, participants, SuccessMessage.GAME_INFO_RETRIEVED.getMessage());
     }
 
     @Override
     public BoardResponse getBoardStatus(String roomCode) {
-        Game game = requireGame(roomCode);
-
+        RoomByCodeEntity room = requireRoom(roomCode);
+        GameByIdEntity game = requireGame(room.getActiveGameId());
         return GameMapper.toBoardResponse(game, SuccessMessage.BOARD_STATUS_RETRIEVED.getMessage());
     }
 
     @Override
-    public GameStatusResponse deleteGame(String roomCode) {
-        requireGame(roomCode);
-        Game deletedGame = gameRepository.delete(roomCode);
+    public GameInfoResponse deleteGame(String roomCode) {
+        RoomByCodeEntity room = requireRoom(roomCode);
+        GameByIdEntity activeGame = requireGame(room.getActiveGameId());
+        List<ParticipantByRoomEntity> participants = participantRepository.findAllByRoomCode(roomCode);
 
-        return GameMapper.toGameStatusResponse(deletedGame, SuccessMessage.GAME_DELETED.getMessage());
+        GameInfoResponse response = toGameInfoResponse(activeGame, participants, SuccessMessage.GAME_DELETED.getMessage());
+
+        for (GameByRoomEntity round : gameByRoomRepository.findAllByRoomCode(roomCode)) {
+            moveRepository.deleteAllByGameId(round.getGameId());
+            gameByIdRepository.deleteById(round.getGameId());
+        }
+
+        gameByRoomRepository.deleteAllByRoomCode(roomCode);
+        participantRepository.deleteAllByRoomCode(roomCode);
+        roomRepository.deleteById(roomCode);
+
+        return response;
     }
 
-    private Game requireGame(String roomCode) {
-        return gameRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new GameNotFoundException(
-                        ErrorMessage.GAME_NOT_FOUND.format(roomCode)
-                ));
+    private GameInfoResponse toGameInfoResponse(GameByIdEntity game, List<ParticipantByRoomEntity> participants, String message) {
+        List<ParticipantResponse> players = participants.stream()
+                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
+                .sorted(Comparator.comparingInt(participant -> Symbol.fromString(participant.getSymbol()).ordinal()))
+                .map(PlayerMapper::toParticipantResponse)
+                .toList();
+
+        int spectatorCount = (int) participants.stream()
+                .filter(participant -> PlayerType.SPECTATOR.name().equals(participant.getPlayerType()))
+                .count();
+
+        return GameMapper.toGameInfoResponse(game, players, spectatorCount, message);
     }
 
-    private Game requireGame(UUID gameId) {
-        return gameRepository.findByActiveGameId(gameId)
-                .orElseThrow(() -> new GameNotFoundException(
-                        ErrorMessage.GAME_ID_NOT_FOUND.format(gameId)
-                ));
+    private RoomByCodeEntity requireRoom(String roomCode) {
+        return roomRepository.findById(roomCode)
+                .orElseThrow(() -> new GameNotFoundException(ErrorMessage.GAME_NOT_FOUND.format(roomCode)));
+    }
+
+    private GameByIdEntity requireGame(UUID gameId) {
+        return gameByIdRepository.findById(gameId)
+                .orElseThrow(() -> new GameNotFoundException(ErrorMessage.GAME_ID_NOT_FOUND.format(gameId)));
+    }
+
+    private GameByIdEntity requireActiveGame(UUID gameId) {
+        GameByIdEntity game = requireGame(gameId);
+        RoomByCodeEntity room = requireRoom(game.getRoomCode());
+
+        if (!room.getActiveGameId().equals(gameId)) {
+            throw new GameNotFoundException(ErrorMessage.GAME_ID_NOT_FOUND.format(gameId));
+        }
+
+        return game;
+    }
+
+    private void finishRound(RoomByCodeEntity room) {
+        gameByRoomRepository.findByRoomCodeAndRoundNo(room.getRoomCode(), room.getCurrentRound())
+                .ifPresent(round -> {
+                    round.setStatus(GameStatus.COMPLETED.name());
+                    round.setEndedAt(Instant.now());
+                    gameByRoomRepository.save(round);
+                });
+    }
+
+    private void updateRoundStatus(String roomCode, int roundNumber, GameStatus status) {
+        gameByRoomRepository.findByRoomCodeAndRoundNo(roomCode, roundNumber)
+                .ifPresent(round -> {
+                    round.setStatus(status.name());
+                    gameByRoomRepository.save(round);
+                });
+    }
+
+    private ParticipantByRoomEntity findPlayerBySymbol(
+            List<ParticipantByRoomEntity> participants,
+            Symbol symbol) {
+        return participants.stream()
+                .filter(participant -> symbol.name().equals(participant.getSymbol()))
+                .findFirst()
+                .orElseThrow(() -> new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage()));
+    }
+
+    private long playerCount(List<ParticipantByRoomEntity> participants) {
+        return participants.stream()
+                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
+                .count();
+    }
+
+    private boolean hasWinner(List<String> board, Symbol symbol) {
+        String value = symbol.name();
+
+        for (int index = 0; index < BOARD_SIZE; index++) {
+            int rowStart = index * BOARD_SIZE;
+
+            boolean hasWinningRow = value.equals(board.get(rowStart))
+                    && value.equals(board.get(rowStart + 1))
+                    && value.equals(board.get(rowStart + 2));
+
+            if (hasWinningRow) {
+                return true;
+            }
+
+            boolean hasWinningColumn = value.equals(board.get(index))
+                    && value.equals(board.get(BOARD_SIZE + index))
+                    && value.equals(board.get(2 * BOARD_SIZE + index));
+
+            if (hasWinningColumn) {
+                return true;
+            }
+        }
+
+        boolean hasWinningLeftDiagonal = value.equals(board.get(0))
+                && value.equals(board.get(4))
+                && value.equals(board.get(8));
+
+        boolean hasWinningRightDiagonal = value.equals(board.get(2))
+                && value.equals(board.get(4))
+                && value.equals(board.get(6));
+
+        return hasWinningLeftDiagonal || hasWinningRightDiagonal;
+    }
+
+    private List<String> mutableBoard(List<String> persistedBoard) {
+        List<String> board = persistedBoard == null
+                ? GameMapper.emptyBoard()
+                : new ArrayList<>(persistedBoard);
+        while (board.size() < BOARD_SIZE * BOARD_SIZE) {
+            board.add("");
+        }
+        return board;
+    }
+
+    private boolean isValidPosition(int x, int y) {
+        return x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
+    }
+
+    private String normalizeName(String playerName) {
+        return playerName.trim().toLowerCase(Locale.ROOT);
     }
 
     private String generateUniqueRoomCode() {
         String roomCode;
-
         do {
             roomCode = CodeGenerator.generate();
-        } while (gameRepository.findByRoomCode(roomCode).isPresent());
-
+        } while (roomRepository.existsById(roomCode));
         return roomCode;
     }
-
 }
