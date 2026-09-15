@@ -15,6 +15,13 @@ CREATE TABLE IF NOT EXISTS rooms_by_code (
     created_at timestamp
 );
 
+-- Fixed-partition catalog used by the history endpoint to list room codes.
+CREATE TABLE IF NOT EXISTS room_catalog (
+    catalog_key text,
+    room_code text,
+    PRIMARY KEY (catalog_key, room_code)
+);
+
 -- One row per round. Used by the move endpoint, which receives a game id.
 CREATE TABLE IF NOT EXISTS games_by_id (
     game_id uuid PRIMARY KEY,
