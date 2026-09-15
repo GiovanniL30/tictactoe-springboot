@@ -2,7 +2,7 @@ package com.svi.tictactoe.dto.response;
 
 import java.util.List;
 
-public record RoomHistoryResponse(
+public record RoomHistorySummaryResponse(
         String roomCode,
-        List<GameInfoResponse> games) {
+        List<GameHistorySummaryResponse> games) {
 }

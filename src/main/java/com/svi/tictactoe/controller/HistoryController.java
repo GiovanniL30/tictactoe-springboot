@@ -1,7 +1,7 @@
 package com.svi.tictactoe.controller;
 
 import com.svi.tictactoe.dto.response.GameMoveHistoryResponse;
-import com.svi.tictactoe.dto.response.RoomHistoryResponse;
+import com.svi.tictactoe.dto.response.RoomHistoriesResponse;
 import com.svi.tictactoe.service.HistoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,13 +22,8 @@ public class HistoryController {
     }
 
     @GetMapping("/rooms")
-    public ResponseEntity<List<RoomHistoryResponse>> getAllRooms() {
+    public ResponseEntity<RoomHistoriesResponse> getAllRooms() {
         return ResponseEntity.ok(historyService.getAllRoomHistories());
-    }
-
-    @GetMapping("/rooms/{roomCode}")
-    public ResponseEntity<RoomHistoryResponse> getRoom(@PathVariable String roomCode) {
-        return ResponseEntity.ok(historyService.getRoomHistory(roomCode));
     }
 
     @GetMapping("/games/{gameId}/moves")

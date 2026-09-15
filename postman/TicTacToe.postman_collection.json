@@ -289,8 +289,19 @@
                   "pm.test('Status is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test('Response is an array', function () {",
-                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "pm.test('Response contains history summary', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.totalRooms).to.be.a('number');",
+                  "    pm.expect(response.totalGames).to.be.a('number');",
+                  "    pm.expect(response.rooms).to.be.an('array');",
+                  "    response.rooms.forEach(function (room) {",
+                  "        pm.expect(room.roomCode).to.be.a('string');",
+                  "        pm.expect(room.games).to.be.an('array');",
+                  "        room.games.forEach(function (game) {",
+                  "            pm.expect(game).to.have.all.keys('gameId', 'status', 'winner');",
+                  "            pm.expect(game).not.to.have.property('roomCode');",
+                  "        });",
+                  "    });",
                   "});"
                 ]
               }
@@ -309,42 +320,6 @@
                 "v1",
                 "history",
                 "rooms"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Room History",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('Room contains a games array', function () {",
-                  "    pm.expect(pm.response.json().games).to.be.an('array');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/history/rooms/{{roomCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "history",
-                "rooms",
-                "{{roomCode}}"
               ]
             }
           }
