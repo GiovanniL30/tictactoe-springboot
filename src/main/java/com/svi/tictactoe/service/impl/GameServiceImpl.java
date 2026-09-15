@@ -286,17 +286,9 @@ public class GameServiceImpl implements GameService {
     }
 
     private GameInfoResponse toGameInfoResponse(GameByIdEntity game, List<ParticipantByRoomEntity> participants, String message) {
-        List<ParticipantResponse> players = participants.stream()
-                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
-                .sorted(Comparator.comparingInt(participant -> Symbol.fromString(participant.getSymbol()).ordinal()))
-                .map(PlayerMapper::toParticipantResponse)
-                .toList();
+        PlayerMapper.ParticipantSummary summary = PlayerMapper.summarize(participants);
 
-        int spectatorCount = (int) participants.stream()
-                .filter(participant -> PlayerType.SPECTATOR.name().equals(participant.getPlayerType()))
-                .count();
-
-        return GameMapper.toGameInfoResponse(game, players, spectatorCount, message);
+        return GameMapper.toGameInfoResponse(game, summary.players(), summary.spectatorCount(), message);
     }
 
     private RoomByCodeEntity requireRoom(String roomCode) {

@@ -6,6 +6,9 @@ import com.svi.tictactoe.dto.response.JoinGameResponse;
 import com.svi.tictactoe.dto.response.ParticipantResponse;
 import com.svi.tictactoe.entity.ParticipantByRoomEntity;
 
+import java.util.Comparator;
+import java.util.List;
+
 public final class PlayerMapper {
 
     private PlayerMapper() {
@@ -24,7 +27,26 @@ public final class PlayerMapper {
         );
     }
 
+    public static ParticipantSummary summarize(List<ParticipantByRoomEntity> participants) {
+        List<ParticipantResponse> players = participants.stream()
+                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
+                .sorted(Comparator.comparingInt(participant ->
+                        Symbol.fromString(participant.getSymbol()).ordinal()))
+                .map(PlayerMapper::toParticipantResponse)
+                .toList();
+        int spectatorCount = (int) participants.stream()
+                .filter(participant -> PlayerType.SPECTATOR.name().equals(participant.getPlayerType()))
+                .count();
+
+        return new ParticipantSummary(players, spectatorCount);
+    }
+
     private static Symbol toSymbol(String value) {
         return value == null || value.isBlank() ? null : Symbol.fromString(value);
+    }
+
+    public record ParticipantSummary(
+            List<ParticipantResponse> players,
+            int spectatorCount) {
     }
 }

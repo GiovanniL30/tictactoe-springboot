@@ -2,14 +2,12 @@ package com.svi.tictactoe.service.impl;
 
 import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.GameStatus;
-import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.SuccessMessage;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.GameInfoResponse;
 import com.svi.tictactoe.dto.response.GameMoveHistoryResponse;
 import com.svi.tictactoe.dto.response.GameResultResponse;
 import com.svi.tictactoe.dto.response.MoveResponse;
-import com.svi.tictactoe.dto.response.ParticipantResponse;
 import com.svi.tictactoe.dto.response.RoomHistoryResponse;
 import com.svi.tictactoe.entity.GameByIdEntity;
 import com.svi.tictactoe.entity.MoveByGameEntity;
@@ -95,15 +93,7 @@ public class HistoryServiceImpl implements HistoryService {
 
     private RoomHistoryResponse toRoomHistory(RoomByCodeEntity room) {
         List<ParticipantByRoomEntity> participants = participantRepository.findAllByRoomCode(room.getRoomCode());
-        List<ParticipantResponse> players = participants.stream()
-                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
-                .sorted(Comparator.comparingInt(participant ->
-                        Symbol.fromString(participant.getSymbol()).ordinal()))
-                .map(PlayerMapper::toParticipantResponse)
-                .toList();
-        int spectatorCount = (int) participants.stream()
-                .filter(participant -> PlayerType.SPECTATOR.name().equals(participant.getPlayerType()))
-                .count();
+        PlayerMapper.ParticipantSummary summary = PlayerMapper.summarize(participants);
 
         List<GameInfoResponse> games = gameByRoomRepository.findAllByRoomCode(room.getRoomCode()).stream()
                 .sorted(Comparator.comparingInt(round -> round.getRoundNo()))
@@ -111,8 +101,8 @@ public class HistoryServiceImpl implements HistoryService {
                 .flatMap(java.util.Optional::stream)
                 .map(game -> GameMapper.toGameInfoResponse(
                         game,
-                        players,
-                        spectatorCount,
+                        summary.players(),
+                        summary.spectatorCount(),
                         SuccessMessage.GAME_INFO_RETRIEVED.getMessage()))
                 .toList();
 
