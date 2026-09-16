@@ -232,7 +232,9 @@ public class GameServiceImpl implements GameService {
     @Override
     public JoinGameResponse joinGame(String roomCode, JoinGameRequest requestBody) {
         RoomByCodeEntity room = requireRoom(roomCode);
-        List<ParticipantByRoomEntity> participants = participantRepository.findAllByRoomCode(roomCode);
+        List<ParticipantByRoomEntity> participants = new ArrayList<>(
+                participantRepository.findAllByRoomCode(roomCode)
+        );
 
         String normalizedName = normalizeName(requestBody.playerName());
         if (participants.stream().anyMatch(participant -> participant.getNormalizedPlayerName().equals(normalizedName))) {
@@ -257,17 +259,14 @@ public class GameServiceImpl implements GameService {
 
         if (type == PlayerType.PLAYER) {
             GameByIdEntity game = requireGame(room.getActiveGameId());
-            if (playerCount + 1 == REQUIRED_PLAYER_COUNT) {
-                room.setStatus(GameStatus.IN_PROGRESS.name());
-                roomRepository.save(room);
-                game.setStatus(GameStatus.IN_PROGRESS.name());
-                gameByIdRepository.save(game);
-                updateRoundStatus(roomCode, room.getCurrentRound(), GameStatus.IN_PROGRESS);
-            }
+            room.setStatus(GameStatus.IN_PROGRESS.name());
+            game.setStatus(GameStatus.IN_PROGRESS.name());
+            participants.add(participant);
 
-            List<ParticipantByRoomEntity> currentPlayers = new ArrayList<>(participants);
-            currentPlayers.add(participant);
-            syncGameForPlayers(game, currentPlayers);
+            roomRepository.save(room);
+            gameByIdRepository.save(game);
+            markRoundInProgress(roomCode, room.getCurrentRound());
+            syncGameForPlayers(game, participants);
         }
 
         String message = type == PlayerType.PLAYER ? SuccessMessage.PLAYER_JOINED.getMessage() : SuccessMessage.SPECTATOR_JOINED.getMessage();
@@ -352,10 +351,10 @@ public class GameServiceImpl implements GameService {
                 });
     }
 
-    private void updateRoundStatus(String roomCode, int roundNumber, GameStatus status) {
+    private void markRoundInProgress(String roomCode, int roundNumber) {
         gameByRoomRepository.findByRoomCodeAndRoundNo(roomCode, roundNumber)
                 .ifPresent(round -> {
-                    round.setStatus(status.name());
+                    round.setStatus(GameStatus.IN_PROGRESS.name());
                     gameByRoomRepository.save(round);
                 });
     }
