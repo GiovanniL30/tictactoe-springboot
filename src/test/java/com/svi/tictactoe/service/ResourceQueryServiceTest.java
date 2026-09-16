@@ -16,7 +16,7 @@ import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
 import com.svi.tictactoe.repository.cassandra.GameRepository;
 import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
-import com.svi.tictactoe.repository.cassandra.ParticipantRepository;
+import com.svi.tictactoe.repository.cassandra.RoomPlayerRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
@@ -54,7 +54,7 @@ class ResourceQueryServiceTest {
         GameRoundRepository gameRoundRepository = mock(GameRoundRepository.class);
         GameRepository gameRepository = mock(GameRepository.class);
         GameMoveRepository moveRepository = mock(GameMoveRepository.class);
-        ParticipantRepository participantRepository = mock(ParticipantRepository.class);
+        RoomPlayerRepository roomPlayerRepository = mock(RoomPlayerRepository.class);
         PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
         PlayerGameRepository playerGameRepository = mock(PlayerGameRepository.class);
         ApplicationEventPublisher eventPublisher = event -> { };
@@ -99,14 +99,14 @@ class ResourceQueryServiceTest {
                 new GameMoveEntity(FIRST_GAME_ID, 2, ROOM_CODE, "Bob", "O", 1, 0, createdAt.plusSeconds(2)),
                 new GameMoveEntity(FIRST_GAME_ID, 1, ROOM_CODE, "Alice", "X", 0, 0, createdAt.plusSeconds(1))
         ));
-        when(participantRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of());
+        when(roomPlayerRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of());
 
         roomService = new RoomServiceImpl(
                 roomRepository,
                 catalogRepository,
                 gameRepository,
                 gameRoundRepository,
-                participantRepository,
+                roomPlayerRepository,
                 moveRepository,
                 playerCatalogRepository,
                 playerGameRepository,
@@ -116,7 +116,7 @@ class ResourceQueryServiceTest {
                 roomRepository,
                 gameRepository,
                 gameRoundRepository,
-                participantRepository,
+                roomPlayerRepository,
                 moveRepository,
                 playerGameSynchronizer,
                 new GameEngine(),

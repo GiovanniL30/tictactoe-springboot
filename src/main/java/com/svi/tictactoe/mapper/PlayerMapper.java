@@ -3,8 +3,8 @@ package com.svi.tictactoe.mapper;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.player.ParticipantResponse;
-import com.svi.tictactoe.entity.ParticipantEntity;
+import com.svi.tictactoe.dto.response.player.PlayerResponse;
+import com.svi.tictactoe.entity.RoomPlayerEntity;
 
 import java.util.Comparator;
 import java.util.List;
@@ -16,14 +16,14 @@ public final class PlayerMapper {
     }
 
     public static JoinGameResponse toJoinGameResponse(
-            ParticipantEntity participant,
+            RoomPlayerEntity player,
             UUID gameId,
             String message) {
-        return new JoinGameResponse(message, gameId, toParticipantResponse(participant));
+        return new JoinGameResponse(message, gameId, toPlayerResponse(player));
     }
 
-    public static ParticipantResponse toParticipantResponse(ParticipantEntity entity) {
-        return new ParticipantResponse(
+    public static PlayerResponse toPlayerResponse(RoomPlayerEntity entity) {
+        return new PlayerResponse(
                 entity.getPlayerName(),
                 entity.getScore() == null ? 0 : entity.getScore(),
                 toSymbol(entity.getSymbol()),
@@ -31,26 +31,26 @@ public final class PlayerMapper {
         );
     }
 
-    public static ParticipantSummary summarize(List<ParticipantEntity> participants) {
-        List<ParticipantResponse> players = participants.stream()
-                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
-                .sorted(Comparator.comparingInt(participant -> Symbol.fromString(participant.getSymbol()).ordinal()))
-                .map(PlayerMapper::toParticipantResponse)
+    public static PlayerSummary summarize(List<RoomPlayerEntity> roomPlayers) {
+        List<PlayerResponse> players = roomPlayers.stream()
+                .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
+                .sorted(Comparator.comparingInt(player -> Symbol.fromString(player.getSymbol()).ordinal()))
+                .map(PlayerMapper::toPlayerResponse)
                 .toList();
 
-        int spectatorCount = (int) participants.stream()
-                .filter(participant -> PlayerType.SPECTATOR.name().equals(participant.getPlayerType()))
+        int spectatorCount = (int) roomPlayers.stream()
+                .filter(player -> PlayerType.SPECTATOR.name().equals(player.getPlayerType()))
                 .count();
 
-        return new ParticipantSummary(players, spectatorCount);
+        return new PlayerSummary(players, spectatorCount);
     }
 
     private static Symbol toSymbol(String value) {
         return value == null || value.isBlank() ? null : Symbol.fromString(value);
     }
 
-    public record ParticipantSummary(
-            List<ParticipantResponse> players,
+    public record PlayerSummary(
+            List<PlayerResponse> players,
             int spectatorCount) {
     }
 }

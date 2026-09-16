@@ -27,7 +27,7 @@ public class GameServiceImpl implements GameService {
     private final RoomRepository roomRepository;
     private final GameRepository gameRepository;
     private final GameRoundRepository gameRoundRepository;
-    private final ParticipantRepository participantRepository;
+    private final RoomPlayerRepository roomPlayerRepository;
     private final GameMoveRepository moveRepository;
     private final PlayerGameSynchronizer playerGameSynchronizer;
     private final GameEngine gameEngine;
@@ -37,7 +37,7 @@ public class GameServiceImpl implements GameService {
             RoomRepository roomRepository,
             GameRepository gameRepository,
             GameRoundRepository gameRoundRepository,
-            ParticipantRepository participantRepository,
+            RoomPlayerRepository roomPlayerRepository,
             GameMoveRepository moveRepository,
             PlayerGameSynchronizer playerGameSynchronizer,
             GameEngine gameEngine,
@@ -45,7 +45,7 @@ public class GameServiceImpl implements GameService {
         this.roomRepository = roomRepository;
         this.gameRepository = gameRepository;
         this.gameRoundRepository = gameRoundRepository;
-        this.participantRepository = participantRepository;
+        this.roomPlayerRepository = roomPlayerRepository;
         this.moveRepository = moveRepository;
         this.playerGameSynchronizer = playerGameSynchronizer;
         this.gameEngine = gameEngine;
@@ -55,8 +55,8 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameInfoResponse getGame(UUID gameId) {
         GameEntity game = requireGame(gameId);
-        List<ParticipantEntity> participants = participantRepository.findAllByRoomCode(game.getRoomCode());
-        return toGameInfoResponse(game, participants, SuccessMessage.GAME_INFO_RETRIEVED.getMessage());
+        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(game.getRoomCode());
+        return toGameInfoResponse(game, players, SuccessMessage.GAME_INFO_RETRIEVED.getMessage());
     }
 
     @Override
@@ -117,8 +117,8 @@ public class GameServiceImpl implements GameService {
         int moveNumber = game.getMoveCount() == null ? 1 : game.getMoveCount() + 1;
         game.setMoveCount(moveNumber);
 
-        List<ParticipantEntity> participants = participantRepository.findAllByRoomCode(game.getRoomCode());
-        ParticipantEntity movingPlayer = findPlayerBySymbol(participants, currentTurn);
+        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(game.getRoomCode());
+        RoomPlayerEntity movingPlayer = findPlayerBySymbol(players, currentTurn);
 
         moveRepository.save(new GameMoveEntity(
                 gameId,
@@ -140,7 +140,7 @@ public class GameServiceImpl implements GameService {
             game.setCurrentTurn(null);
             room.setStatus(GameStatus.COMPLETED.name());
             movingPlayer.setScore((movingPlayer.getScore() == null ? 0 : movingPlayer.getScore()) + 1);
-            participantRepository.save(movingPlayer);
+            roomPlayerRepository.save(movingPlayer);
             finishRound(room);
             roundCompleted = true;
         } else if (board.stream().noneMatch(String::isBlank)) {
@@ -158,7 +158,7 @@ public class GameServiceImpl implements GameService {
         roomRepository.save(room);
 
         if (roundCompleted) {
-            playerGameSynchronizer.sync(game, participants);
+            playerGameSynchronizer.sync(game, players);
         }
 
         BoardResponse response = GameMapper.toBoardResponse(game, SuccessMessage.MOVE_PLACED.getMessage());
@@ -167,7 +167,7 @@ public class GameServiceImpl implements GameService {
         if (roundCompleted) {
             GameInfoResponse completedGame = toGameInfoResponse(
                     game,
-                    participants,
+                    players,
                     SuccessMessage.GAME_COMPLETED.getMessage()
             );
             publishRealtime(game.getRoomCode(), MessageTopic.GAME_COMPLETED, completedGame);
@@ -176,8 +176,8 @@ public class GameServiceImpl implements GameService {
         return response;
     }
 
-    private GameInfoResponse toGameInfoResponse(GameEntity game, List<ParticipantEntity> participants, String message) {
-        PlayerMapper.ParticipantSummary summary = PlayerMapper.summarize(participants);
+    private GameInfoResponse toGameInfoResponse(GameEntity game, List<RoomPlayerEntity> players, String message) {
+        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
         return GameMapper.toGameInfoResponse(game, summary.players(), summary.spectatorCount(), message);
     }
 
@@ -211,9 +211,9 @@ public class GameServiceImpl implements GameService {
                 });
     }
 
-    private ParticipantEntity findPlayerBySymbol(List<ParticipantEntity> participants, Symbol symbol) {
-        return participants.stream()
-                .filter(participant -> symbol.name().equals(participant.getSymbol()))
+    private RoomPlayerEntity findPlayerBySymbol(List<RoomPlayerEntity> players, Symbol symbol) {
+        return players.stream()
+                .filter(player -> symbol.name().equals(player.getSymbol()))
                 .findFirst()
                 .orElseThrow(() -> new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage()));
     }

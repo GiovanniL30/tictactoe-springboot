@@ -2,7 +2,7 @@ package com.svi.tictactoe.service.support;
 
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.entity.GameEntity;
-import com.svi.tictactoe.entity.ParticipantEntity;
+import com.svi.tictactoe.entity.RoomPlayerEntity;
 import com.svi.tictactoe.entity.PlayerCatalogEntity;
 import com.svi.tictactoe.entity.PlayerGameEntity;
 import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
@@ -26,23 +26,23 @@ public class PlayerGameSynchronizer {
         this.playerGameRepository = playerGameRepository;
     }
 
-    public void sync(GameEntity game, List<ParticipantEntity> participants) {
-        participants.stream()
-                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
-                .forEach(participant -> {
+    public void sync(GameEntity game, List<RoomPlayerEntity> players) {
+        players.stream()
+                .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
+                .forEach(player -> {
                     playerCatalogRepository.save(new PlayerCatalogEntity(
                             PlayerCatalogEntity.ALL_PLAYERS,
-                            participant.getNormalizedPlayerName(),
-                            participant.getPlayerName()
+                            player.getNormalizedPlayerName(),
+                            player.getPlayerName()
                     ));
 
                     playerGameRepository.save(new PlayerGameEntity(
-                            participant.getNormalizedPlayerName(),
+                            player.getNormalizedPlayerName(),
                             game.getGameId(),
                             game.getRoomCode(),
-                            participant.getSymbol(),
+                            player.getSymbol(),
                             game.getWinner() != null
-                                    && normalize(game.getWinner()).equals(participant.getNormalizedPlayerName())
+                                    && normalize(game.getWinner()).equals(player.getNormalizedPlayerName())
                     ));
                 });
     }

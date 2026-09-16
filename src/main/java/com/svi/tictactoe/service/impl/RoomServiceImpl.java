@@ -18,7 +18,7 @@ import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
 import com.svi.tictactoe.dto.response.room.RoomsResponse;
 import com.svi.tictactoe.entity.GameEntity;
 import com.svi.tictactoe.entity.GameRoundEntity;
-import com.svi.tictactoe.entity.ParticipantEntity;
+import com.svi.tictactoe.entity.RoomPlayerEntity;
 import com.svi.tictactoe.entity.PlayerCatalogEntity;
 import com.svi.tictactoe.entity.PlayerGameEntity;
 import com.svi.tictactoe.entity.RoomCatalogEntity;
@@ -33,7 +33,7 @@ import com.svi.tictactoe.realtime.event.RealtimeEvent;
 import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
 import com.svi.tictactoe.repository.cassandra.GameRepository;
 import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
-import com.svi.tictactoe.repository.cassandra.ParticipantRepository;
+import com.svi.tictactoe.repository.cassandra.RoomPlayerRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
@@ -61,7 +61,7 @@ public class RoomServiceImpl implements RoomService {
     private final RoomCatalogRepository roomCatalogRepository;
     private final GameRepository gameRepository;
     private final GameRoundRepository gameRoundRepository;
-    private final ParticipantRepository participantRepository;
+    private final RoomPlayerRepository roomPlayerRepository;
     private final GameMoveRepository moveRepository;
     private final PlayerCatalogRepository playerCatalogRepository;
     private final PlayerGameRepository playerGameRepository;
@@ -73,7 +73,7 @@ public class RoomServiceImpl implements RoomService {
             RoomCatalogRepository roomCatalogRepository,
             GameRepository gameRepository,
             GameRoundRepository gameRoundRepository,
-            ParticipantRepository participantRepository,
+            RoomPlayerRepository roomPlayerRepository,
             GameMoveRepository moveRepository,
             PlayerCatalogRepository playerCatalogRepository,
             PlayerGameRepository playerGameRepository,
@@ -83,7 +83,7 @@ public class RoomServiceImpl implements RoomService {
         this.roomCatalogRepository = roomCatalogRepository;
         this.gameRepository = gameRepository;
         this.gameRoundRepository = gameRoundRepository;
-        this.participantRepository = participantRepository;
+        this.roomPlayerRepository = roomPlayerRepository;
         this.moveRepository = moveRepository;
         this.playerCatalogRepository = playerCatalogRepository;
         this.playerGameRepository = playerGameRepository;
@@ -116,7 +116,7 @@ public class RoomServiceImpl implements RoomService {
                 now,
                 null
         );
-        ParticipantEntity creator = new ParticipantEntity(
+        RoomPlayerEntity creator = new RoomPlayerEntity(
                 roomCode,
                 normalize(requestBody.playerName()),
                 requestBody.playerName(),
@@ -130,33 +130,33 @@ public class RoomServiceImpl implements RoomService {
         roomCatalogRepository.save(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, roomCode));
         gameRepository.save(game);
         gameRoundRepository.save(gameRound);
-        participantRepository.save(creator);
+        roomPlayerRepository.save(creator);
         playerGameSynchronizer.sync(game, List.of(creator));
 
         return new CreateGameResponse(
                 SuccessMessage.GAME_CREATED.getMessage(),
                 roomCode,
                 gameId,
-                PlayerMapper.toParticipantResponse(creator)
+                PlayerMapper.toPlayerResponse(creator)
         );
     }
 
     @Override
     public JoinGameResponse joinRoom(String roomCode, JoinGameRequest requestBody) {
         RoomEntity room = requireRoom(roomCode);
-        List<ParticipantEntity> participants = participantRepository.findAllByRoomCode(roomCode);
+        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
 
         String normalizedName = normalize(requestBody.playerName());
-        if (participants.stream()
-                .anyMatch(participant -> participant.getNormalizedPlayerName().equals(normalizedName))) {
+        if (players.stream()
+                .anyMatch(player -> player.getNormalizedPlayerName().equals(normalizedName))) {
             throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(requestBody.playerName()));
         }
 
-        long playerCount = playerCount(participants);
+        long playerCount = playerCount(players);
         PlayerType type = playerCount < REQUIRED_PLAYER_COUNT ? PlayerType.PLAYER : PlayerType.SPECTATOR;
         Symbol symbol = type == PlayerType.SPECTATOR ? null : (playerCount == 0 ? Symbol.X : Symbol.O);
 
-        ParticipantEntity participant = new ParticipantEntity(
+        RoomPlayerEntity player = new RoomPlayerEntity(
                 roomCode,
                 normalizedName,
                 requestBody.playerName(),
@@ -166,15 +166,15 @@ public class RoomServiceImpl implements RoomService {
                 Instant.now()
         );
 
-        participantRepository.save(participant);
-        participants.add(participant);
+        roomPlayerRepository.save(player);
+        players.add(player);
 
         String message = type == PlayerType.PLAYER
                 ? SuccessMessage.PLAYER_JOINED.getMessage()
                 : SuccessMessage.SPECTATOR_JOINED.getMessage();
         GameEntity game = requireGame(room.getActiveGameId());
         JoinGameResponse response = PlayerMapper.toJoinGameResponse(
-                participant,
+                player,
                 game.getGameId(),
                 message
         );
@@ -186,13 +186,13 @@ public class RoomServiceImpl implements RoomService {
             roomRepository.save(room);
             gameRepository.save(game);
             markRoundInProgress(roomCode, room.getCurrentRound());
-            playerGameSynchronizer.sync(game, participants);
+            playerGameSynchronizer.sync(game, players);
         }
 
         publishRealtime(
                 roomCode,
                 MessageTopic.PLAYER_JOINED,
-                toGameInfoResponse(game, participants, message)
+                toGameInfoResponse(game, players, message)
         );
         return response;
     }
@@ -229,8 +229,8 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public PlayAgainResponse playAgain(String roomCode) {
         RoomEntity room = requireRoom(roomCode);
-        List<ParticipantEntity> participants = participantRepository.findAllByRoomCode(roomCode);
-        if (playerCount(participants) < REQUIRED_PLAYER_COUNT) {
+        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
+        if (playerCount(players) < REQUIRED_PLAYER_COUNT) {
             throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
         }
 
@@ -243,7 +243,7 @@ public class RoomServiceImpl implements RoomService {
         }
 
         finishRound(room);
-        playerGameSynchronizer.sync(previousGame, participants);
+        playerGameSynchronizer.sync(previousGame, players);
 
         UUID nextGameId = UUID.randomUUID();
         int nextRound = room.getCurrentRound() + 1;
@@ -273,7 +273,7 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
         gameRepository.save(nextGame);
         gameRoundRepository.save(nextGameRound);
-        playerGameSynchronizer.sync(nextGame, participants);
+        playerGameSynchronizer.sync(nextGame, players);
 
         PlayAgainResponse response = RoomMapper.toPlayAgainResponse(
                 room,
@@ -286,7 +286,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public RoomInfoResponse deleteRoom(String roomCode) {
         RoomEntity room = requireRoom(roomCode);
-        List<ParticipantEntity> participants = participantRepository.findAllByRoomCode(roomCode);
+        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
         RoomInfoResponse response = toRoomInfoResponse(room);
 
         List<GameRoundEntity> rounds = gameRoundRepository.findAllByRoomCode(roomCode);
@@ -295,12 +295,12 @@ public class RoomServiceImpl implements RoomService {
             gameRepository.deleteById(round.getGameId());
         }
 
-        participants.stream()
-                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
-                .forEach(participant -> removeRoomFromPlayerHistory(participant, rounds));
+        players.stream()
+                .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
+                .forEach(player -> removeRoomFromPlayerHistory(player, rounds));
 
         gameRoundRepository.deleteAllByRoomCode(roomCode);
-        participantRepository.deleteAllByRoomCode(roomCode);
+        roomPlayerRepository.deleteAllByRoomCode(roomCode);
         roomCatalogRepository.delete(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, roomCode));
         roomRepository.deleteById(roomCode);
 
@@ -310,9 +310,9 @@ public class RoomServiceImpl implements RoomService {
 
     private GameInfoResponse toGameInfoResponse(
             GameEntity game,
-            List<ParticipantEntity> participants,
+            List<RoomPlayerEntity> players,
             String message) {
-        PlayerMapper.ParticipantSummary summary = PlayerMapper.summarize(participants);
+        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
         return GameMapper.toGameInfoResponse(game, summary.players(), summary.spectatorCount(), message);
     }
 
@@ -359,7 +359,7 @@ public class RoomServiceImpl implements RoomService {
                 });
     }
 
-    private void removeRoomFromPlayerHistory(ParticipantEntity player, List<GameRoundEntity> rounds) {
+    private void removeRoomFromPlayerHistory(RoomPlayerEntity player, List<GameRoundEntity> rounds) {
         rounds.forEach(round -> playerGameRepository.deleteByNormalizedPlayerNameAndGameId(
                 player.getNormalizedPlayerName(),
                 round.getGameId()
@@ -374,9 +374,9 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    private long playerCount(List<ParticipantEntity> participants) {
-        return participants.stream()
-                .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
+    private long playerCount(List<RoomPlayerEntity> players) {
+        return players.stream()
+                .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
                 .count();
     }
 

@@ -26,7 +26,7 @@ All routes are relative to `http://localhost:8080`. Requests and responses use J
 - Valid symbols are `X` and `O`.
 - Board coordinates are zero-based: `x` is the row and `y` is the column. Both must be from `0` through `2`.
 - Game statuses are `WAITING_FOR_PLAYERS`, `IN_PROGRESS`, and `COMPLETED`.
-- The room creator is player X. The second unique participant is player O. Later participants join as spectators.
+- The room creator is player X. The second unique player is player O. Later players join as spectators.
 - Player-name comparison is case-insensitive and ignores leading and trailing spaces.
 - A winning player's score increases by one. A completed draw has `winner: "DRAW"`; otherwise `winner` is the winning player's display name.
 - Empty board positions and unavailable values such as `currentTurn`, `winner`, and a spectator's `symbol` are returned as `null`.
@@ -69,7 +69,7 @@ Success: `201 Created`
 
 `POST /api/v1/rooms/{roomCode}/join`
 
-Adds the second participant as player O and changes the game to `IN_PROGRESS`. If X and O already exist, the participant joins as a spectator instead.
+Adds the second player as player O and changes the game to `IN_PROGRESS`. If X and O already exist, the player joins as a spectator instead.
 
 Request body:
 
@@ -87,7 +87,7 @@ Success for player O: `200 OK`
 {
   "message": "Player joined successfully.",
   "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
-  "participant": {
+  "player": {
     "playerName": "Vanni",
     "score": 0,
     "symbol": "O",
@@ -102,7 +102,7 @@ Success for a spectator: `200 OK`
 {
   "message": "Game already has two players. Joined as spectator.",
   "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
-  "participant": {
+  "player": {
     "playerName": "Observer",
     "score": 0,
     "symbol": null,
@@ -197,7 +197,7 @@ Use the new `gameId` when placing moves in the new round.
 
 `DELETE /api/v1/rooms/{roomCode}`
 
-Deletes the room, all its games and moves, its participants, and the associated player-game history. The response contains the room summary captured immediately before deletion.
+Deletes the room, all its games and moves, its players, and the associated player-game history. The response contains the room summary captured immediately before deletion.
 
 Request body: none.
 
@@ -456,7 +456,7 @@ Common errors:
 |---|---|
 | `400 Bad Request` | Missing or malformed body, invalid symbol, or coordinates outside `0`–`2` |
 | `404 Not Found` | Room, game UUID, or player does not exist; a move uses a game UUID that is no longer the room's active round |
-| `409 Conflict` | Duplicate participant name, game has not started, round is already complete, wrong symbol's turn, or board position is occupied |
+| `409 Conflict` | Duplicate player name, game has not started, round is already complete, wrong symbol's turn, or board position is occupied |
 
 ## Typical gameplay sequence
 

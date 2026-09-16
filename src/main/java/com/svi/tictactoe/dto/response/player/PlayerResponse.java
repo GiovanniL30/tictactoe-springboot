@@ -3,7 +3,7 @@ package com.svi.tictactoe.dto.response.player;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 
-public record ParticipantResponse(
+public record PlayerResponse(
         String playerName,
         int score,
         Symbol symbol,

@@ -1,16 +1,16 @@
 package com.svi.tictactoe.repository.cassandra;
 
-import com.svi.tictactoe.entity.ParticipantEntity;
+import com.svi.tictactoe.entity.RoomPlayerEntity;
 import org.springframework.data.cassandra.core.mapping.MapId;
 import org.springframework.data.cassandra.repository.CassandraRepository;
 import org.springframework.data.cassandra.repository.Query;
 
 import java.util.List;
 
-public interface ParticipantRepository extends CassandraRepository<ParticipantEntity, MapId> {
+public interface RoomPlayerRepository extends CassandraRepository<RoomPlayerEntity, MapId> {
 
-    @Query("SELECT * FROM participants WHERE room_code = ?0")
-    List<ParticipantEntity> findAllByRoomCode(String roomCode);
+    @Query("SELECT * FROM room_players WHERE room_code = ?0")
+    List<RoomPlayerEntity> findAllByRoomCode(String roomCode);
 
     void deleteAllByRoomCode(String roomCode);
 }

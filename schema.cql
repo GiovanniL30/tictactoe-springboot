@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS game_rounds (
 ) WITH CLUSTERING ORDER BY (round_no ASC);
 
 -- Room-lifetime membership. Scores and spectators survive game-id changes.
-CREATE TABLE IF NOT EXISTS participants (
+CREATE TABLE IF NOT EXISTS room_players (
     room_code text,
     normalized_player_name text,
     player_name text,

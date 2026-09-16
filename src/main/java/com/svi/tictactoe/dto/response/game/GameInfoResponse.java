@@ -2,13 +2,13 @@ package com.svi.tictactoe.dto.response.game;
 
 import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.player.ParticipantResponse;
+import com.svi.tictactoe.dto.response.player.PlayerResponse;
 
 import java.util.List;
 import java.util.UUID;
 
 public record GameInfoResponse(
-        List<ParticipantResponse> players,
+        List<PlayerResponse> players,
         String roomCode,
         UUID gameId,
         int round,

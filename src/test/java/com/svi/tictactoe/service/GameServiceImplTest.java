@@ -17,13 +17,13 @@ import com.svi.tictactoe.entity.GameEntity;
 import com.svi.tictactoe.entity.PlayerGameEntity;
 import com.svi.tictactoe.entity.GameRoundEntity;
 import com.svi.tictactoe.entity.GameMoveEntity;
-import com.svi.tictactoe.entity.ParticipantEntity;
+import com.svi.tictactoe.entity.RoomPlayerEntity;
 import com.svi.tictactoe.entity.RoomEntity;
 import com.svi.tictactoe.repository.cassandra.GameRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
 import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
 import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
-import com.svi.tictactoe.repository.cassandra.ParticipantRepository;
+import com.svi.tictactoe.repository.cassandra.RoomPlayerRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
 import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
@@ -67,9 +67,9 @@ class GameServiceImplTest {
         assertEquals(Symbol.X, game.player().symbol());
         assertEquals(game.gameId(), secondPlayer.gameId());
         assertEquals(game.gameId(), spectator.gameId());
-        assertEquals(Symbol.O, secondPlayer.participant().symbol());
-        assertEquals(PlayerType.SPECTATOR, spectator.participant().type());
-        assertNull(spectator.participant().symbol());
+        assertEquals(Symbol.O, secondPlayer.player().symbol());
+        assertEquals(PlayerType.SPECTATOR, spectator.player().type());
+        assertNull(spectator.player().symbol());
         assertEquals(1, gameService.getGame(game.gameId()).spectatorCount());
         assertEquals(game.gameId(), roomService.getRoom(game.roomCode()).games().getFirst().gameId());
         assertEquals(GameStatus.IN_PROGRESS, roomService.getRoom(game.roomCode()).games().getFirst().status());
@@ -161,7 +161,7 @@ class GameServiceImplTest {
         private final RoomCatalogRepository roomCatalogRepository = mock(RoomCatalogRepository.class);
         private final GameRepository gameRepository = mock(GameRepository.class);
         private final GameRoundRepository gameRoundRepository = mock(GameRoundRepository.class);
-        private final ParticipantRepository participantRepository = mock(ParticipantRepository.class);
+        private final RoomPlayerRepository roomPlayerRepository = mock(RoomPlayerRepository.class);
         private final GameMoveRepository moveRepository = mock(GameMoveRepository.class);
         private final PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
         private final PlayerGameRepository playerGameRepository = mock(PlayerGameRepository.class);
@@ -172,7 +172,7 @@ class GameServiceImplTest {
         private final Map<String, RoomEntity> rooms = new HashMap<>();
         private final Map<UUID, GameEntity> games = new HashMap<>();
         private final Map<String, List<GameRoundEntity>> rounds = new HashMap<>();
-        private final Map<String, List<ParticipantEntity>> participants = new HashMap<>();
+        private final Map<String, List<RoomPlayerEntity>> roomPlayers = new HashMap<>();
         private final Map<UUID, List<GameMoveEntity>> moves = new HashMap<>();
         private final Map<String, Map<UUID, PlayerGameEntity>> playerGames = new HashMap<>();
 
@@ -213,16 +213,16 @@ class GameServiceImplTest {
                 return entity;
             });
 
-            when(participantRepository.findAllByRoomCode(anyString()))
+            when(roomPlayerRepository.findAllByRoomCode(anyString()))
                     .thenAnswer(invocation -> new ArrayList<>(
-                            participants.getOrDefault(invocation.getArgument(0), List.of())));
-            when(participantRepository.save(any(ParticipantEntity.class))).thenAnswer(invocation -> {
-                ParticipantEntity entity = invocation.getArgument(0);
-                List<ParticipantEntity> roomParticipants = participants.computeIfAbsent(
+                            roomPlayers.getOrDefault(invocation.getArgument(0), List.of())));
+            when(roomPlayerRepository.save(any(RoomPlayerEntity.class))).thenAnswer(invocation -> {
+                RoomPlayerEntity entity = invocation.getArgument(0);
+                List<RoomPlayerEntity> playersInRoom = roomPlayers.computeIfAbsent(
                         entity.getRoomCode(), ignored -> new ArrayList<>());
-                roomParticipants.removeIf(participant -> participant.getNormalizedPlayerName()
+                playersInRoom.removeIf(player -> player.getNormalizedPlayerName()
                         .equals(entity.getNormalizedPlayerName()));
-                roomParticipants.add(entity);
+                playersInRoom.add(entity);
                 return entity;
             });
 
@@ -245,7 +245,7 @@ class GameServiceImplTest {
                     roomRepository,
                     gameRepository,
                     gameRoundRepository,
-                    participantRepository,
+                    roomPlayerRepository,
                     moveRepository,
                     playerGameSynchronizer(),
                     gameEngine,
@@ -259,7 +259,7 @@ class GameServiceImplTest {
                     roomCatalogRepository,
                     gameRepository,
                     gameRoundRepository,
-                    participantRepository,
+                    roomPlayerRepository,
                     moveRepository,
                     playerCatalogRepository,
                     playerGameRepository,
