@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface GameMoveRepository extends CassandraRepository<GameMoveEntity, MapId> {
 
-    @Query("SELECT * FROM moves_by_game WHERE game_id = ?0")
+    @Query("SELECT * FROM game_moves WHERE game_id = ?0")
     List<GameMoveEntity> findAllByGameId(UUID gameId);
 
     void deleteAllByGameId(UUID gameId);

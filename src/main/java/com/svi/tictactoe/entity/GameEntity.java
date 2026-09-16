@@ -7,7 +7,7 @@ import org.springframework.data.cassandra.core.mapping.Table;
 import java.util.List;
 import java.util.UUID;
 
-@Table("games_by_id")
+@Table("games")
 public class GameEntity {
 
     @PrimaryKey("game_id")

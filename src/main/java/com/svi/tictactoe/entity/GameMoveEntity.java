@@ -8,7 +8,7 @@ import org.springframework.data.cassandra.core.mapping.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-@Table("moves_by_game")
+@Table("game_moves")
 public class GameMoveEntity {
 
     @PrimaryKeyColumn(name = "game_id", ordinal = 0, type = PrimaryKeyType.PARTITIONED)

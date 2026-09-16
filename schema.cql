@@ -7,7 +7,7 @@ WITH replication = {
 USE tictactoe;
 
 -- One row per room. Used by every room-code endpoint and room-code uniqueness checks.
-CREATE TABLE IF NOT EXISTS rooms_by_code (
+CREATE TABLE IF NOT EXISTS rooms (
     room_code text PRIMARY KEY,
     active_game_id uuid,
     current_round int,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS room_catalog (
 );
 
 -- One row per round. Used by the move endpoint, which receives a game id.
-CREATE TABLE IF NOT EXISTS games_by_id (
+CREATE TABLE IF NOT EXISTS games (
     game_id uuid PRIMARY KEY,
     room_code text,
     round_no int,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS games_by_id (
 );
 
 -- Round history for a room. Used when advancing or deleting a room.
-CREATE TABLE IF NOT EXISTS games_by_room (
+CREATE TABLE IF NOT EXISTS game_rounds (
     room_code text,
     round_no int,
     game_id uuid,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS games_by_room (
 ) WITH CLUSTERING ORDER BY (round_no ASC);
 
 -- Room-lifetime membership. Scores and spectators survive game-id changes.
-CREATE TABLE IF NOT EXISTS participants_by_room (
+CREATE TABLE IF NOT EXISTS participants (
     room_code text,
     normalized_player_name text,
     player_name text,
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS participants_by_room (
 );
 
 -- Immutable move history for one round.
-CREATE TABLE IF NOT EXISTS moves_by_game (
+CREATE TABLE IF NOT EXISTS game_moves (
     game_id uuid,
     move_no int,
     room_code text,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS player_catalog (
 );
 
 -- Query-first projection of games played by one player.
-CREATE TABLE IF NOT EXISTS games_by_player (
+CREATE TABLE IF NOT EXISTS player_games (
     normalized_player_name text,
     game_id uuid,
     room_code text,

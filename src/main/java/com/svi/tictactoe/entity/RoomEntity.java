@@ -7,7 +7,7 @@ import org.springframework.data.cassandra.core.mapping.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-@Table("rooms_by_code")
+@Table("rooms")
 public class RoomEntity {
 
     @PrimaryKey("room_code")

@@ -7,7 +7,7 @@ import org.springframework.data.cassandra.core.mapping.Table;
 
 import java.util.UUID;
 
-@Table("games_by_player")
+@Table("player_games")
 public class PlayerGameEntity {
 
     @PrimaryKeyColumn(name = "normalized_player_name", ordinal = 0, type = PrimaryKeyType.PARTITIONED)

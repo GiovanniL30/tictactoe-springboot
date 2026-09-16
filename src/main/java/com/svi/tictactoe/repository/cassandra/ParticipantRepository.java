@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface ParticipantRepository extends CassandraRepository<ParticipantEntity, MapId> {
 
-    @Query("SELECT * FROM participants_by_room WHERE room_code = ?0")
+    @Query("SELECT * FROM participants WHERE room_code = ?0")
     List<ParticipantEntity> findAllByRoomCode(String roomCode);
 
     void deleteAllByRoomCode(String roomCode);

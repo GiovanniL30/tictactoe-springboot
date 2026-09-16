@@ -10,9 +10,9 @@ import java.util.UUID;
 
 public interface PlayerGameRepository extends CassandraRepository<PlayerGameEntity, MapId> {
 
-    @Query("SELECT * FROM games_by_player WHERE normalized_player_name = ?0")
+    @Query("SELECT * FROM player_games WHERE normalized_player_name = ?0")
     List<PlayerGameEntity> findAllByNormalizedPlayerName(String normalizedPlayerName);
 
-    @Query("DELETE FROM games_by_player WHERE normalized_player_name = ?0 AND game_id = ?1")
+    @Query("DELETE FROM player_games WHERE normalized_player_name = ?0 AND game_id = ?1")
     void deleteByNormalizedPlayerNameAndGameId(String normalizedPlayerName, UUID gameId);
 }

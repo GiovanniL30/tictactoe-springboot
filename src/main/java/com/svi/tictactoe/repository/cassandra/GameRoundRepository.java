@@ -10,10 +10,10 @@ import java.util.Optional;
 
 public interface GameRoundRepository extends CassandraRepository<GameRoundEntity, MapId> {
 
-    @Query("SELECT * FROM games_by_room WHERE room_code = ?0")
+    @Query("SELECT * FROM game_rounds WHERE room_code = ?0")
     List<GameRoundEntity> findAllByRoomCode(String roomCode);
 
-    @Query("SELECT * FROM games_by_room WHERE room_code = ?0 AND round_no = ?1")
+    @Query("SELECT * FROM game_rounds WHERE room_code = ?0 AND round_no = ?1")
     Optional<GameRoundEntity> findByRoomCodeAndRoundNo(String roomCode, Integer roundNo);
 
     void deleteAllByRoomCode(String roomCode);
