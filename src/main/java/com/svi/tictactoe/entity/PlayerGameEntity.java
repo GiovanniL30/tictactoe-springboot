@@ -8,7 +8,7 @@ import org.springframework.data.cassandra.core.mapping.Table;
 import java.util.UUID;
 
 @Table("games_by_player")
-public class GameByPlayerEntity {
+public class PlayerGameEntity {
 
     @PrimaryKeyColumn(name = "normalized_player_name", ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private String normalizedPlayerName;
@@ -25,10 +25,10 @@ public class GameByPlayerEntity {
     @Column("won")
     private Boolean won;
 
-    public GameByPlayerEntity() {
+    public PlayerGameEntity() {
     }
 
-    public GameByPlayerEntity(
+    public PlayerGameEntity(
             String normalizedPlayerName,
             UUID gameId,
             String roomCode,

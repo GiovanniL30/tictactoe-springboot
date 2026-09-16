@@ -3,10 +3,10 @@ package com.svi.tictactoe.service;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.player.PlayerGamesResponse;
 import com.svi.tictactoe.dto.response.player.PlayersResponse;
-import com.svi.tictactoe.entity.GameByPlayerEntity;
+import com.svi.tictactoe.entity.PlayerGameEntity;
 import com.svi.tictactoe.entity.PlayerCatalogEntity;
 import com.svi.tictactoe.exception.PlayerNotFoundException;
-import com.svi.tictactoe.repository.cassandra.GameByPlayerRepository;
+import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
 import com.svi.tictactoe.service.impl.PlayerHistoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,16 +27,16 @@ class PlayerHistoryServiceImplTest {
     private static final String NORMALIZED_NAME = "alice";
 
     private PlayerCatalogRepository playerCatalogRepository;
-    private GameByPlayerRepository gameByPlayerRepository;
+    private PlayerGameRepository playerGameRepository;
     private PlayerHistoryService playerHistoryService;
 
     @BeforeEach
     void setUp() {
         playerCatalogRepository = mock(PlayerCatalogRepository.class);
-        gameByPlayerRepository = mock(GameByPlayerRepository.class);
+        playerGameRepository = mock(PlayerGameRepository.class);
         playerHistoryService = new PlayerHistoryServiceImpl(
                 playerCatalogRepository,
-                gameByPlayerRepository
+                playerGameRepository
         );
     }
 
@@ -63,7 +63,7 @@ class PlayerHistoryServiceImplTest {
                 PlayerCatalogEntity.ALL_PLAYERS,
                 NORMALIZED_NAME))
                 .thenReturn(Optional.of(player(NORMALIZED_NAME, "Alice")));
-        when(gameByPlayerRepository.findAllByNormalizedPlayerName(NORMALIZED_NAME))
+        when(playerGameRepository.findAllByNormalizedPlayerName(NORMALIZED_NAME))
                 .thenReturn(List.of(
                         game(newerGameId, false),
                         game(olderGameId, true)
@@ -98,8 +98,8 @@ class PlayerHistoryServiceImplTest {
         return new PlayerCatalogEntity(PlayerCatalogEntity.ALL_PLAYERS, normalizedName, playerName);
     }
 
-    private GameByPlayerEntity game(UUID gameId, boolean won) {
-        return new GameByPlayerEntity(
+    private PlayerGameEntity game(UUID gameId, boolean won) {
+        return new PlayerGameEntity(
                 NORMALIZED_NAME,
                 gameId,
                 "ROOM",

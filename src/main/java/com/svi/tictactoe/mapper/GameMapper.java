@@ -5,7 +5,7 @@ import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.game.BoardResponse;
 import com.svi.tictactoe.dto.response.game.GameInfoResponse;
 import com.svi.tictactoe.dto.response.player.ParticipantResponse;
-import com.svi.tictactoe.entity.GameByIdEntity;
+import com.svi.tictactoe.entity.GameEntity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,7 +18,7 @@ public final class GameMapper {
     private GameMapper() {
     }
 
-    public static BoardResponse toBoardResponse(GameByIdEntity entity, String message) {
+    public static BoardResponse toBoardResponse(GameEntity entity, String message) {
         return new BoardResponse(
                 message,
                 entity.getGameId(),
@@ -28,7 +28,7 @@ public final class GameMapper {
         );
     }
 
-    public static GameInfoResponse toGameInfoResponse(GameByIdEntity entity, List<ParticipantResponse> players, int spectatorCount, String message) {
+    public static GameInfoResponse toGameInfoResponse(GameEntity entity, List<ParticipantResponse> players, int spectatorCount, String message) {
         return new GameInfoResponse(
                 players,
                 entity.getRoomCode(),

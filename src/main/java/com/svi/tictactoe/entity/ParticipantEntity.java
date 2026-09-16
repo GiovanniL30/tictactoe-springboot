@@ -8,7 +8,7 @@ import org.springframework.data.cassandra.core.mapping.Table;
 import java.time.Instant;
 
 @Table("participants_by_room")
-public class ParticipantByRoomEntity {
+public class ParticipantEntity {
 
     @PrimaryKeyColumn(name = "room_code", ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private String roomCode;
@@ -31,10 +31,10 @@ public class ParticipantByRoomEntity {
     @Column("joined_at")
     private Instant joinedAt;
 
-    public ParticipantByRoomEntity() {
+    public ParticipantEntity() {
     }
 
-    public ParticipantByRoomEntity(
+    public ParticipantEntity(
             String roomCode,
             String normalizedPlayerName,
             String playerName,

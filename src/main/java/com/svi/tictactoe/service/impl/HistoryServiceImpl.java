@@ -9,16 +9,16 @@ import com.svi.tictactoe.dto.response.history.GameResultResponse;
 import com.svi.tictactoe.dto.response.history.MoveResponse;
 import com.svi.tictactoe.dto.response.history.RoomHistoriesResponse;
 import com.svi.tictactoe.dto.response.history.RoomHistorySummaryResponse;
-import com.svi.tictactoe.entity.GameByIdEntity;
-import com.svi.tictactoe.entity.GameByRoomEntity;
-import com.svi.tictactoe.entity.MoveByGameEntity;
-import com.svi.tictactoe.entity.RoomByCodeEntity;
+import com.svi.tictactoe.entity.GameEntity;
+import com.svi.tictactoe.entity.GameRoundEntity;
+import com.svi.tictactoe.entity.GameMoveEntity;
+import com.svi.tictactoe.entity.RoomEntity;
 import com.svi.tictactoe.entity.RoomCatalogEntity;
 import com.svi.tictactoe.exception.GameNotFoundException;
-import com.svi.tictactoe.repository.cassandra.GameByIdRepository;
-import com.svi.tictactoe.repository.cassandra.GameByRoomRepository;
-import com.svi.tictactoe.repository.cassandra.MoveByGameRepository;
-import com.svi.tictactoe.repository.cassandra.RoomByCodeRepository;
+import com.svi.tictactoe.repository.cassandra.GameRepository;
+import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
+import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
+import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.service.HistoryService;
 import org.springframework.stereotype.Service;
@@ -32,27 +32,27 @@ import java.util.UUID;
 public class HistoryServiceImpl implements HistoryService {
 
     private final RoomCatalogRepository roomCatalogRepository;
-    private final RoomByCodeRepository roomRepository;
-    private final GameByRoomRepository gameByRoomRepository;
-    private final GameByIdRepository gameByIdRepository;
-    private final MoveByGameRepository moveRepository;
+    private final RoomRepository roomRepository;
+    private final GameRoundRepository gameRoundRepository;
+    private final GameRepository gameRepository;
+    private final GameMoveRepository moveRepository;
 
     public HistoryServiceImpl(
             RoomCatalogRepository roomCatalogRepository,
-            RoomByCodeRepository roomRepository,
-            GameByRoomRepository gameByRoomRepository,
-            GameByIdRepository gameByIdRepository,
-            MoveByGameRepository moveRepository) {
+            RoomRepository roomRepository,
+            GameRoundRepository gameRoundRepository,
+            GameRepository gameRepository,
+            GameMoveRepository moveRepository) {
         this.roomCatalogRepository = roomCatalogRepository;
         this.roomRepository = roomRepository;
-        this.gameByRoomRepository = gameByRoomRepository;
-        this.gameByIdRepository = gameByIdRepository;
+        this.gameRoundRepository = gameRoundRepository;
+        this.gameRepository = gameRepository;
         this.moveRepository = moveRepository;
     }
 
     @Override
     public RoomHistoriesResponse getAllRoomHistories() {
-        List<RoomByCodeEntity> rooms = roomCatalogRepository
+        List<RoomEntity> rooms = roomCatalogRepository
                 .findAllByCatalogKey(RoomCatalogEntity.ALL_ROOMS).stream()
                 .sorted(Comparator.comparing(RoomCatalogEntity::getRoomCode))
                 .map(RoomCatalogEntity::getRoomCode)
@@ -73,9 +73,9 @@ public class HistoryServiceImpl implements HistoryService {
 
     @Override
     public GameMoveHistoryResponse getGameMoves(UUID gameId) {
-        GameByIdEntity game = requireGame(gameId);
+        GameEntity game = requireGame(gameId);
         List<MoveResponse> moves = moveRepository.findAllByGameId(gameId).stream()
-                .sorted(Comparator.comparing(MoveByGameEntity::getMoveNo))
+                .sorted(Comparator.comparing(GameMoveEntity::getMoveNo))
                 .map(this::toMoveResponse)
                 .toList();
 
@@ -93,10 +93,10 @@ public class HistoryServiceImpl implements HistoryService {
         );
     }
 
-    private RoomHistorySummaryResponse toRoomHistorySummary(RoomByCodeEntity room) {
-        List<GameHistorySummaryResponse> games = gameByRoomRepository
+    private RoomHistorySummaryResponse toRoomHistorySummary(RoomEntity room) {
+        List<GameHistorySummaryResponse> games = gameRoundRepository
                 .findAllByRoomCode(room.getRoomCode()).stream()
-                .sorted(Comparator.comparing(GameByRoomEntity::getRoundNo))
+                .sorted(Comparator.comparing(GameRoundEntity::getRoundNo))
                 .map(this::toGameHistorySummary)
                 .toList();
 
@@ -106,8 +106,8 @@ public class HistoryServiceImpl implements HistoryService {
         );
     }
 
-    private GameHistorySummaryResponse toGameHistorySummary(GameByRoomEntity gameByRoom) {
-        GameByIdEntity game = requireGame(gameByRoom.getGameId());
+    private GameHistorySummaryResponse toGameHistorySummary(GameRoundEntity gameRound) {
+        GameEntity game = requireGame(gameRound.getGameId());
 
         return new GameHistorySummaryResponse(
                 game.getGameId(),
@@ -116,7 +116,7 @@ public class HistoryServiceImpl implements HistoryService {
         );
     }
 
-    private MoveResponse toMoveResponse(MoveByGameEntity move) {
+    private MoveResponse toMoveResponse(GameMoveEntity move) {
         return new MoveResponse(
                 move.getMoveNo(),
                 move.getPlayerName(),
@@ -127,8 +127,8 @@ public class HistoryServiceImpl implements HistoryService {
         );
     }
 
-    private GameByIdEntity requireGame(UUID gameId) {
-        return gameByIdRepository.findById(gameId)
+    private GameEntity requireGame(UUID gameId) {
+        return gameRepository.findById(gameId)
                 .orElseThrow(() -> new GameNotFoundException(
                         ErrorMessage.GAME_ID_NOT_FOUND.format(gameId)));
     }

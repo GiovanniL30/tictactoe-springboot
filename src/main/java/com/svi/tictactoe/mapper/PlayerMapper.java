@@ -4,7 +4,7 @@ import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
 import com.svi.tictactoe.dto.response.player.ParticipantResponse;
-import com.svi.tictactoe.entity.ParticipantByRoomEntity;
+import com.svi.tictactoe.entity.ParticipantEntity;
 
 import java.util.Comparator;
 import java.util.List;
@@ -14,11 +14,11 @@ public final class PlayerMapper {
     private PlayerMapper() {
     }
 
-    public static JoinGameResponse toJoinGameResponse(ParticipantByRoomEntity participant, String message) {
+    public static JoinGameResponse toJoinGameResponse(ParticipantEntity participant, String message) {
         return new JoinGameResponse(message, toParticipantResponse(participant));
     }
 
-    public static ParticipantResponse toParticipantResponse(ParticipantByRoomEntity entity) {
+    public static ParticipantResponse toParticipantResponse(ParticipantEntity entity) {
         return new ParticipantResponse(
                 entity.getPlayerName(),
                 entity.getScore() == null ? 0 : entity.getScore(),
@@ -27,7 +27,7 @@ public final class PlayerMapper {
         );
     }
 
-    public static ParticipantSummary summarize(List<ParticipantByRoomEntity> participants) {
+    public static ParticipantSummary summarize(List<ParticipantEntity> participants) {
         List<ParticipantResponse> players = participants.stream()
                 .filter(participant -> PlayerType.PLAYER.name().equals(participant.getPlayerType()))
                 .sorted(Comparator.comparingInt(participant -> Symbol.fromString(participant.getSymbol()).ordinal()))

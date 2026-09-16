@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Table("rooms_by_code")
-public class RoomByCodeEntity {
+public class RoomEntity {
 
     @PrimaryKey("room_code")
     private String roomCode;
@@ -25,10 +25,10 @@ public class RoomByCodeEntity {
     @Column("created_at")
     private Instant createdAt;
 
-    public RoomByCodeEntity() {
+    public RoomEntity() {
     }
 
-    public RoomByCodeEntity(String roomCode, UUID activeGameId, Integer currentRound, String status, Instant createdAt) {
+    public RoomEntity(String roomCode, UUID activeGameId, Integer currentRound, String status, Instant createdAt) {
         this.roomCode = roomCode;
         this.activeGameId = activeGameId;
         this.currentRound = currentRound;

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Table("games_by_id")
-public class GameByIdEntity {
+public class GameEntity {
 
     @PrimaryKey("game_id")
     private UUID gameId;
@@ -34,10 +34,10 @@ public class GameByIdEntity {
     @Column("board")
     private List<String> board;
 
-    public GameByIdEntity() {
+    public GameEntity() {
     }
 
-    public GameByIdEntity(UUID gameId, String roomCode, Integer roundNo, String status, String currentTurn, String winner, Integer moveCount, List<String> board) {
+    public GameEntity(UUID gameId, String roomCode, Integer roundNo, String status, String currentTurn, String winner, Integer moveCount, List<String> board) {
         this.gameId = gameId;
         this.roomCode = roomCode;
         this.roundNo = roundNo;

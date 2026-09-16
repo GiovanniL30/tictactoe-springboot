@@ -11,19 +11,19 @@ import com.svi.tictactoe.dto.response.game.CreateGameResponse;
 import com.svi.tictactoe.dto.response.game.GameInfoResponse;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
-import com.svi.tictactoe.entity.GameByIdEntity;
-import com.svi.tictactoe.entity.GameByPlayerEntity;
-import com.svi.tictactoe.entity.GameByRoomEntity;
-import com.svi.tictactoe.entity.MoveByGameEntity;
-import com.svi.tictactoe.entity.ParticipantByRoomEntity;
-import com.svi.tictactoe.entity.RoomByCodeEntity;
-import com.svi.tictactoe.repository.cassandra.GameByIdRepository;
-import com.svi.tictactoe.repository.cassandra.GameByPlayerRepository;
-import com.svi.tictactoe.repository.cassandra.GameByRoomRepository;
-import com.svi.tictactoe.repository.cassandra.MoveByGameRepository;
-import com.svi.tictactoe.repository.cassandra.ParticipantByRoomRepository;
+import com.svi.tictactoe.entity.GameEntity;
+import com.svi.tictactoe.entity.PlayerGameEntity;
+import com.svi.tictactoe.entity.GameRoundEntity;
+import com.svi.tictactoe.entity.GameMoveEntity;
+import com.svi.tictactoe.entity.ParticipantEntity;
+import com.svi.tictactoe.entity.RoomEntity;
+import com.svi.tictactoe.repository.cassandra.GameRepository;
+import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
+import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
+import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
+import com.svi.tictactoe.repository.cassandra.ParticipantRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
-import com.svi.tictactoe.repository.cassandra.RoomByCodeRepository;
+import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -134,53 +134,53 @@ class GameServiceImplTest {
 
     private static final class RepositoryHarness {
 
-        private final RoomByCodeRepository roomRepository = mock(RoomByCodeRepository.class);
+        private final RoomRepository roomRepository = mock(RoomRepository.class);
         private final RoomCatalogRepository roomCatalogRepository = mock(RoomCatalogRepository.class);
-        private final GameByIdRepository gameByIdRepository = mock(GameByIdRepository.class);
-        private final GameByRoomRepository gameByRoomRepository = mock(GameByRoomRepository.class);
-        private final ParticipantByRoomRepository participantRepository = mock(ParticipantByRoomRepository.class);
-        private final MoveByGameRepository moveRepository = mock(MoveByGameRepository.class);
+        private final GameRepository gameRepository = mock(GameRepository.class);
+        private final GameRoundRepository gameRoundRepository = mock(GameRoundRepository.class);
+        private final ParticipantRepository participantRepository = mock(ParticipantRepository.class);
+        private final GameMoveRepository moveRepository = mock(GameMoveRepository.class);
         private final PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
-        private final GameByPlayerRepository gameByPlayerRepository = mock(GameByPlayerRepository.class);
+        private final PlayerGameRepository playerGameRepository = mock(PlayerGameRepository.class);
 
-        private final Map<String, RoomByCodeEntity> rooms = new HashMap<>();
-        private final Map<UUID, GameByIdEntity> games = new HashMap<>();
-        private final Map<String, List<GameByRoomEntity>> rounds = new HashMap<>();
-        private final Map<String, List<ParticipantByRoomEntity>> participants = new HashMap<>();
-        private final Map<UUID, List<MoveByGameEntity>> moves = new HashMap<>();
-        private final Map<String, Map<UUID, GameByPlayerEntity>> playerGames = new HashMap<>();
+        private final Map<String, RoomEntity> rooms = new HashMap<>();
+        private final Map<UUID, GameEntity> games = new HashMap<>();
+        private final Map<String, List<GameRoundEntity>> rounds = new HashMap<>();
+        private final Map<String, List<ParticipantEntity>> participants = new HashMap<>();
+        private final Map<UUID, List<GameMoveEntity>> moves = new HashMap<>();
+        private final Map<String, Map<UUID, PlayerGameEntity>> playerGames = new HashMap<>();
 
         private RepositoryHarness() {
             when(roomRepository.existsById(anyString()))
                     .thenAnswer(invocation -> rooms.containsKey(invocation.getArgument(0)));
             when(roomRepository.findById(anyString()))
                     .thenAnswer(invocation -> Optional.ofNullable(rooms.get(invocation.getArgument(0))));
-            when(roomRepository.save(any(RoomByCodeEntity.class))).thenAnswer(invocation -> {
-                RoomByCodeEntity entity = invocation.getArgument(0);
+            when(roomRepository.save(any(RoomEntity.class))).thenAnswer(invocation -> {
+                RoomEntity entity = invocation.getArgument(0);
                 rooms.put(entity.getRoomCode(), entity);
                 return entity;
             });
 
-            when(gameByIdRepository.findById(any(UUID.class)))
+            when(gameRepository.findById(any(UUID.class)))
                     .thenAnswer(invocation -> Optional.ofNullable(games.get(invocation.getArgument(0))));
-            when(gameByIdRepository.save(any(GameByIdEntity.class))).thenAnswer(invocation -> {
-                GameByIdEntity entity = invocation.getArgument(0);
+            when(gameRepository.save(any(GameEntity.class))).thenAnswer(invocation -> {
+                GameEntity entity = invocation.getArgument(0);
                 games.put(entity.getGameId(), entity);
                 return entity;
             });
 
-            when(gameByRoomRepository.findAllByRoomCode(anyString()))
+            when(gameRoundRepository.findAllByRoomCode(anyString()))
                     .thenAnswer(invocation -> new ArrayList<>(
                             rounds.getOrDefault(invocation.getArgument(0), List.of())));
-            when(gameByRoomRepository.findByRoomCodeAndRoundNo(anyString(), anyInt()))
+            when(gameRoundRepository.findByRoomCodeAndRoundNo(anyString(), anyInt()))
                     .thenAnswer(invocation -> rounds
                             .getOrDefault(invocation.getArgument(0), List.of())
                             .stream()
                             .filter(round -> round.getRoundNo().equals(invocation.getArgument(1)))
                             .findFirst());
-            when(gameByRoomRepository.save(any(GameByRoomEntity.class))).thenAnswer(invocation -> {
-                GameByRoomEntity entity = invocation.getArgument(0);
-                List<GameByRoomEntity> roomRounds = rounds.computeIfAbsent(
+            when(gameRoundRepository.save(any(GameRoundEntity.class))).thenAnswer(invocation -> {
+                GameRoundEntity entity = invocation.getArgument(0);
+                List<GameRoundEntity> roomRounds = rounds.computeIfAbsent(
                         entity.getRoomCode(), ignored -> new ArrayList<>());
                 roomRounds.removeIf(round -> round.getRoundNo().equals(entity.getRoundNo()));
                 roomRounds.add(entity);
@@ -190,9 +190,9 @@ class GameServiceImplTest {
             when(participantRepository.findAllByRoomCode(anyString()))
                     .thenAnswer(invocation -> new ArrayList<>(
                             participants.getOrDefault(invocation.getArgument(0), List.of())));
-            when(participantRepository.save(any(ParticipantByRoomEntity.class))).thenAnswer(invocation -> {
-                ParticipantByRoomEntity entity = invocation.getArgument(0);
-                List<ParticipantByRoomEntity> roomParticipants = participants.computeIfAbsent(
+            when(participantRepository.save(any(ParticipantEntity.class))).thenAnswer(invocation -> {
+                ParticipantEntity entity = invocation.getArgument(0);
+                List<ParticipantEntity> roomParticipants = participants.computeIfAbsent(
                         entity.getRoomCode(), ignored -> new ArrayList<>());
                 roomParticipants.removeIf(participant -> participant.getNormalizedPlayerName()
                         .equals(entity.getNormalizedPlayerName()));
@@ -200,14 +200,14 @@ class GameServiceImplTest {
                 return entity;
             });
 
-            when(moveRepository.save(any(MoveByGameEntity.class))).thenAnswer(invocation -> {
-                MoveByGameEntity entity = invocation.getArgument(0);
+            when(moveRepository.save(any(GameMoveEntity.class))).thenAnswer(invocation -> {
+                GameMoveEntity entity = invocation.getArgument(0);
                 moves.computeIfAbsent(entity.getGameId(), ignored -> new ArrayList<>()).add(entity);
                 return entity;
             });
 
-            when(gameByPlayerRepository.save(any(GameByPlayerEntity.class))).thenAnswer(invocation -> {
-                GameByPlayerEntity entity = invocation.getArgument(0);
+            when(playerGameRepository.save(any(PlayerGameEntity.class))).thenAnswer(invocation -> {
+                PlayerGameEntity entity = invocation.getArgument(0);
                 playerGames.computeIfAbsent(entity.getNormalizedPlayerName(), ignored -> new HashMap<>())
                         .put(entity.getGameId(), entity);
                 return entity;
@@ -218,12 +218,12 @@ class GameServiceImplTest {
             return new GameServiceImpl(
                     roomRepository,
                     roomCatalogRepository,
-                    gameByIdRepository,
-                    gameByRoomRepository,
+                    gameRepository,
+                    gameRoundRepository,
                     participantRepository,
                     moveRepository,
                     playerCatalogRepository,
-                    gameByPlayerRepository
+                    playerGameRepository
             );
         }
     }

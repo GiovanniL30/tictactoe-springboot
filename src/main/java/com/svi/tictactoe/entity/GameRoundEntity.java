@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Table("games_by_room")
-public class GameByRoomEntity {
+public class GameRoundEntity {
 
     @PrimaryKeyColumn(name = "room_code", ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private String roomCode;
@@ -29,10 +29,10 @@ public class GameByRoomEntity {
     @Column("ended_at")
     private Instant endedAt;
 
-    public GameByRoomEntity() {
+    public GameRoundEntity() {
     }
 
-    public GameByRoomEntity(String roomCode, Integer roundNo, UUID gameId, String status, Instant createdAt, Instant endedAt) {
+    public GameRoundEntity(String roomCode, Integer roundNo, UUID gameId, String status, Instant createdAt, Instant endedAt) {
         this.roomCode = roomCode;
         this.roundNo = roundNo;
         this.gameId = gameId;

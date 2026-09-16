@@ -4,16 +4,16 @@ import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.history.GameMoveHistoryResponse;
 import com.svi.tictactoe.dto.response.history.RoomHistoriesResponse;
-import com.svi.tictactoe.entity.GameByIdEntity;
-import com.svi.tictactoe.entity.GameByRoomEntity;
-import com.svi.tictactoe.entity.MoveByGameEntity;
-import com.svi.tictactoe.entity.RoomByCodeEntity;
+import com.svi.tictactoe.entity.GameEntity;
+import com.svi.tictactoe.entity.GameRoundEntity;
+import com.svi.tictactoe.entity.GameMoveEntity;
+import com.svi.tictactoe.entity.RoomEntity;
 import com.svi.tictactoe.entity.RoomCatalogEntity;
 import com.svi.tictactoe.mapper.GameMapper;
-import com.svi.tictactoe.repository.cassandra.GameByIdRepository;
-import com.svi.tictactoe.repository.cassandra.GameByRoomRepository;
-import com.svi.tictactoe.repository.cassandra.MoveByGameRepository;
-import com.svi.tictactoe.repository.cassandra.RoomByCodeRepository;
+import com.svi.tictactoe.repository.cassandra.GameRepository;
+import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
+import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
+import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.service.impl.HistoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,15 +40,15 @@ class HistoryServiceImplTest {
     @BeforeEach
     void setUp() {
         RoomCatalogRepository catalogRepository = mock(RoomCatalogRepository.class);
-        RoomByCodeRepository roomRepository = mock(RoomByCodeRepository.class);
-        GameByRoomRepository gameByRoomRepository = mock(GameByRoomRepository.class);
-        GameByIdRepository gameByIdRepository = mock(GameByIdRepository.class);
-        MoveByGameRepository moveRepository = mock(MoveByGameRepository.class);
+        RoomRepository roomRepository = mock(RoomRepository.class);
+        GameRoundRepository gameRoundRepository = mock(GameRoundRepository.class);
+        GameRepository gameRepository = mock(GameRepository.class);
+        GameMoveRepository moveRepository = mock(GameMoveRepository.class);
 
         Instant createdAt = Instant.parse("2026-09-15T00:00:00Z");
-        RoomByCodeEntity room = new RoomByCodeEntity(
+        RoomEntity room = new RoomEntity(
                 ROOM_CODE, SECOND_GAME_ID, 2, GameStatus.IN_PROGRESS.name(), createdAt);
-        GameByIdEntity firstGame = new GameByIdEntity(
+        GameEntity firstGame = new GameEntity(
                 FIRST_GAME_ID,
                 ROOM_CODE,
                 1,
@@ -57,7 +57,7 @@ class HistoryServiceImplTest {
                 "Alice",
                 5,
                 List.of("X", "X", "X", "O", "O", "", "", "", ""));
-        GameByIdEntity secondGame = new GameByIdEntity(
+        GameEntity secondGame = new GameEntity(
                 SECOND_GAME_ID,
                 ROOM_CODE,
                 2,
@@ -70,24 +70,24 @@ class HistoryServiceImplTest {
         when(catalogRepository.findAllByCatalogKey(RoomCatalogEntity.ALL_ROOMS))
                 .thenReturn(List.of(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, ROOM_CODE)));
         when(roomRepository.findById(ROOM_CODE)).thenReturn(Optional.of(room));
-        when(gameByRoomRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of(
-                new GameByRoomEntity(
+        when(gameRoundRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of(
+                new GameRoundEntity(
                         ROOM_CODE, 2, SECOND_GAME_ID, GameStatus.IN_PROGRESS.name(), createdAt.plusSeconds(10), null),
-                new GameByRoomEntity(
+                new GameRoundEntity(
                         ROOM_CODE, 1, FIRST_GAME_ID, GameStatus.COMPLETED.name(), createdAt, createdAt.plusSeconds(5))
         ));
-        when(gameByIdRepository.findById(FIRST_GAME_ID)).thenReturn(Optional.of(firstGame));
-        when(gameByIdRepository.findById(SECOND_GAME_ID)).thenReturn(Optional.of(secondGame));
+        when(gameRepository.findById(FIRST_GAME_ID)).thenReturn(Optional.of(firstGame));
+        when(gameRepository.findById(SECOND_GAME_ID)).thenReturn(Optional.of(secondGame));
         when(moveRepository.findAllByGameId(FIRST_GAME_ID)).thenReturn(List.of(
-                new MoveByGameEntity(FIRST_GAME_ID, 2, ROOM_CODE, "Bob", "O", 1, 0, createdAt.plusSeconds(2)),
-                new MoveByGameEntity(FIRST_GAME_ID, 1, ROOM_CODE, "Alice", "X", 0, 0, createdAt.plusSeconds(1))
+                new GameMoveEntity(FIRST_GAME_ID, 2, ROOM_CODE, "Bob", "O", 1, 0, createdAt.plusSeconds(2)),
+                new GameMoveEntity(FIRST_GAME_ID, 1, ROOM_CODE, "Alice", "X", 0, 0, createdAt.plusSeconds(1))
         ));
 
         historyService = new HistoryServiceImpl(
                 catalogRepository,
                 roomRepository,
-                gameByRoomRepository,
-                gameByIdRepository,
+                gameRoundRepository,
+                gameRepository,
                 moveRepository);
     }
 
