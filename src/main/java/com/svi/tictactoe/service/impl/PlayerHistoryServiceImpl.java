@@ -16,7 +16,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
+
+import static com.svi.tictactoe.util.PlayerNameUtil.normalize;
 
 @Service
 public class PlayerHistoryServiceImpl implements PlayerHistoryService {
@@ -44,7 +45,7 @@ public class PlayerHistoryServiceImpl implements PlayerHistoryService {
 
     @Override
     public PlayerGamesResponse getPlayerGames(String playerName) {
-        String normalizedPlayerName = normalizeName(playerName);
+        String normalizedPlayerName = normalize(playerName);
 
         PlayerCatalogEntity player = playerCatalogRepository
                 .findByCatalogKeyAndNormalizedPlayerName(PlayerCatalogEntity.ALL_PLAYERS, normalizedPlayerName)
@@ -69,7 +70,4 @@ public class PlayerHistoryServiceImpl implements PlayerHistoryService {
         );
     }
 
-    private String normalizeName(String playerName) {
-        return playerName.trim().toLowerCase(Locale.ROOT);
-    }
 }

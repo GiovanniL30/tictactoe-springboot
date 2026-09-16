@@ -5,6 +5,7 @@ import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
 import com.svi.tictactoe.dto.response.game.*;
+import com.svi.tictactoe.engine.GameEngine;
 import com.svi.tictactoe.entity.*;
 import com.svi.tictactoe.exception.*;
 import com.svi.tictactoe.mapper.GameMapper;
@@ -12,19 +13,19 @@ import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.RoomMapper;
 import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.GameService;
+import com.svi.tictactoe.util.BoardUtil;
 import com.svi.tictactoe.util.CodeGenerator;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
+
+import static com.svi.tictactoe.util.PlayerNameUtil.normalize;
 
 @Service
 public class GameServiceImpl implements GameService {
 
-    private static final int BOARD_SIZE = 3;
     private static final int REQUIRED_PLAYER_COUNT = 2;
 
     private final RoomRepository roomRepository;
@@ -35,6 +36,7 @@ public class GameServiceImpl implements GameService {
     private final GameMoveRepository moveRepository;
     private final PlayerCatalogRepository playerCatalogRepository;
     private final PlayerGameRepository playerGameRepository;
+    private final GameEngine gameEngine;
 
     public GameServiceImpl(
             RoomRepository roomRepository,
@@ -44,7 +46,8 @@ public class GameServiceImpl implements GameService {
             ParticipantRepository participantRepository,
             GameMoveRepository moveRepository,
             PlayerCatalogRepository playerCatalogRepository,
-            PlayerGameRepository playerGameRepository) {
+            PlayerGameRepository playerGameRepository,
+            GameEngine gameEngine) {
         this.roomRepository = roomRepository;
         this.roomCatalogRepository = roomCatalogRepository;
         this.gameRepository = gameRepository;
@@ -53,6 +56,7 @@ public class GameServiceImpl implements GameService {
         this.moveRepository = moveRepository;
         this.playerCatalogRepository = playerCatalogRepository;
         this.playerGameRepository = playerGameRepository;
+        this.gameEngine = gameEngine;
     }
 
     @Override
@@ -78,7 +82,7 @@ public class GameServiceImpl implements GameService {
 
         ParticipantEntity creator = new ParticipantEntity(
                 roomCode,
-                normalizeName(requestBody.playerName()),
+                normalize(requestBody.playerName()),
                 requestBody.playerName(),
                 PlayerType.PLAYER.name(),
                 Symbol.X.name(),
@@ -116,7 +120,7 @@ public class GameServiceImpl implements GameService {
         int x = requestBody.x();
         int y = requestBody.y();
 
-        if (!isValidPosition(x, y)) {
+        if (!gameEngine.isValidPosition(x, y)) {
             throw new InvalidPositionException(ErrorMessage.INVALID_POSITION.format(x, y));
         }
 
@@ -125,8 +129,8 @@ public class GameServiceImpl implements GameService {
             throw new InvalidTurnException(ErrorMessage.INVALID_TURN.format(currentTurn));
         }
 
-        List<String> board = mutableBoard(game.getBoard());
-        int boardIndex = x * BOARD_SIZE + y;
+        List<String> board = BoardUtil.mutableBoard(game.getBoard());
+        int boardIndex = x * BoardUtil.BOARD_SIZE + y;
         if (!board.get(boardIndex).isBlank()) {
             throw new PositionAlreadyTakenException(ErrorMessage.POSITION_ALREADY_TAKEN.format(x, y));
         }
@@ -153,7 +157,7 @@ public class GameServiceImpl implements GameService {
         RoomEntity room = requireRoom(game.getRoomCode());
         boolean roundCompleted = false;
 
-        if (hasWinner(board, currentTurn)) {
+        if (gameEngine.hasWinner(board, currentTurn)) {
             game.setStatus(GameStatus.COMPLETED.name());
             game.setWinner(movingPlayer.getPlayerName());
             game.setCurrentTurn(null);
@@ -234,7 +238,7 @@ public class GameServiceImpl implements GameService {
         RoomEntity room = requireRoom(roomCode);
         List<ParticipantEntity> participants = participantRepository.findAllByRoomCode(roomCode);
 
-        String normalizedName = normalizeName(requestBody.playerName());
+        String normalizedName = normalize(requestBody.playerName());
         if (participants.stream().anyMatch(participant -> participant.getNormalizedPlayerName().equals(normalizedName))) {
             throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(requestBody.playerName()));
         }
@@ -372,7 +376,7 @@ public class GameServiceImpl implements GameService {
                             game.getGameId(),
                             game.getRoomCode(),
                             participant.getSymbol(),
-                            game.getWinner() != null && normalizeName(game.getWinner()).equals(participant.getNormalizedPlayerName())
+                            game.getWinner() != null && normalize(game.getWinner()).equals(participant.getNormalizedPlayerName())
                     ));
                 });
     }
@@ -405,57 +409,6 @@ public class GameServiceImpl implements GameService {
                 .count();
     }
 
-    private boolean hasWinner(List<String> board, Symbol symbol) {
-        String value = symbol.name();
-
-        for (int index = 0; index < BOARD_SIZE; index++) {
-            int rowStart = index * BOARD_SIZE;
-
-            boolean hasWinningRow = value.equals(board.get(rowStart))
-                    && value.equals(board.get(rowStart + 1))
-                    && value.equals(board.get(rowStart + 2));
-
-            if (hasWinningRow) {
-                return true;
-            }
-
-            boolean hasWinningColumn = value.equals(board.get(index))
-                    && value.equals(board.get(BOARD_SIZE + index))
-                    && value.equals(board.get(2 * BOARD_SIZE + index));
-
-            if (hasWinningColumn) {
-                return true;
-            }
-        }
-
-        boolean hasWinningLeftDiagonal = value.equals(board.get(0))
-                && value.equals(board.get(4))
-                && value.equals(board.get(8));
-
-        boolean hasWinningRightDiagonal = value.equals(board.get(2))
-                && value.equals(board.get(4))
-                && value.equals(board.get(6));
-
-        return hasWinningLeftDiagonal || hasWinningRightDiagonal;
-    }
-
-    private List<String> mutableBoard(List<String> persistedBoard) {
-        List<String> board = persistedBoard == null
-                ? GameMapper.emptyBoard()
-                : new ArrayList<>(persistedBoard);
-        while (board.size() < BOARD_SIZE * BOARD_SIZE) {
-            board.add("");
-        }
-        return board;
-    }
-
-    private boolean isValidPosition(int x, int y) {
-        return x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
-    }
-
-    private String normalizeName(String playerName) {
-        return playerName.trim().toLowerCase(Locale.ROOT);
-    }
 
     private String generateUniqueRoomCode() {
         String roomCode;

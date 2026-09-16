@@ -11,9 +11,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public final class GameMapper {
+import static com.svi.tictactoe.util.BoardUtil.BOARD_SIZE;
 
-    private static final int BOARD_SIZE = 3;
+public final class GameMapper {
 
     private GameMapper() {
     }

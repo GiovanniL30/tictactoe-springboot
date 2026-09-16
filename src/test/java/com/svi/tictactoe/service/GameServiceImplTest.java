@@ -11,6 +11,7 @@ import com.svi.tictactoe.dto.response.game.CreateGameResponse;
 import com.svi.tictactoe.dto.response.game.GameInfoResponse;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
+import com.svi.tictactoe.engine.GameEngine;
 import com.svi.tictactoe.entity.GameEntity;
 import com.svi.tictactoe.entity.PlayerGameEntity;
 import com.svi.tictactoe.entity.GameRoundEntity;
@@ -142,6 +143,7 @@ class GameServiceImplTest {
         private final GameMoveRepository moveRepository = mock(GameMoveRepository.class);
         private final PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
         private final PlayerGameRepository playerGameRepository = mock(PlayerGameRepository.class);
+        private final GameEngine gameEngine = new GameEngine();
 
         private final Map<String, RoomEntity> rooms = new HashMap<>();
         private final Map<UUID, GameEntity> games = new HashMap<>();
@@ -223,7 +225,8 @@ class GameServiceImplTest {
                     participantRepository,
                     moveRepository,
                     playerCatalogRepository,
-                    playerGameRepository
+                    playerGameRepository,
+                    gameEngine
             );
         }
     }
