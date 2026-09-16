@@ -38,6 +38,7 @@ public class GameByPlayerEntity {
         this.gameId = gameId;
         this.roomCode = roomCode;
         this.symbol = symbol;
+        this.won = won;
     }
 
     public String getNormalizedPlayerName() {

@@ -12,6 +12,7 @@ import com.svi.tictactoe.dto.response.game.GameInfoResponse;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
 import com.svi.tictactoe.entity.GameByIdEntity;
+import com.svi.tictactoe.entity.GameByPlayerEntity;
 import com.svi.tictactoe.entity.GameByRoomEntity;
 import com.svi.tictactoe.entity.MoveByGameEntity;
 import com.svi.tictactoe.entity.ParticipantByRoomEntity;
@@ -110,6 +111,23 @@ class GameServiceImplTest {
         assertNull(nextRound.winner());
     }
 
+    @Test
+    void recordsTheWinnerAndLoserInPlayerGameHistory() {
+        RepositoryHarness harness = new RepositoryHarness();
+        GameService service = harness.service();
+        CreateGameResponse game = service.createGame(new CreateGameRequest("Alice"));
+        service.joinGame(game.roomCode(), joinRequest("Bob"));
+
+        service.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
+        service.placeMove(game.gameId(), new AddMoveRequest(1, 0, Symbol.O));
+        service.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.X));
+        service.placeMove(game.gameId(), new AddMoveRequest(1, 1, Symbol.O));
+        service.placeMove(game.gameId(), new AddMoveRequest(0, 2, Symbol.X));
+
+        assertEquals(Boolean.TRUE, harness.playerGames.get("alice").get(game.gameId()).getWon());
+        assertEquals(Boolean.FALSE, harness.playerGames.get("bob").get(game.gameId()).getWon());
+    }
+
     private JoinGameRequest joinRequest(String playerName) {
         return new JoinGameRequest(playerName);
     }
@@ -130,6 +148,7 @@ class GameServiceImplTest {
         private final Map<String, List<GameByRoomEntity>> rounds = new HashMap<>();
         private final Map<String, List<ParticipantByRoomEntity>> participants = new HashMap<>();
         private final Map<UUID, List<MoveByGameEntity>> moves = new HashMap<>();
+        private final Map<String, Map<UUID, GameByPlayerEntity>> playerGames = new HashMap<>();
 
         private RepositoryHarness() {
             when(roomRepository.existsById(anyString()))
@@ -184,6 +203,13 @@ class GameServiceImplTest {
             when(moveRepository.save(any(MoveByGameEntity.class))).thenAnswer(invocation -> {
                 MoveByGameEntity entity = invocation.getArgument(0);
                 moves.computeIfAbsent(entity.getGameId(), ignored -> new ArrayList<>()).add(entity);
+                return entity;
+            });
+
+            when(gameByPlayerRepository.save(any(GameByPlayerEntity.class))).thenAnswer(invocation -> {
+                GameByPlayerEntity entity = invocation.getArgument(0);
+                playerGames.computeIfAbsent(entity.getNormalizedPlayerName(), ignored -> new HashMap<>())
+                        .put(entity.getGameId(), entity);
                 return entity;
             });
         }

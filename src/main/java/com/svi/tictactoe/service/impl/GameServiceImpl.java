@@ -375,15 +375,12 @@ public class GameServiceImpl implements GameService {
                             game.getGameId(),
                             game.getRoomCode(),
                             participant.getSymbol(),
-                            game.getWinner() != null
-                                    && normalizeName(game.getWinner()).equals(participant.getNormalizedPlayerName())
+                            game.getWinner() != null && normalizeName(game.getWinner()).equals(participant.getNormalizedPlayerName())
                     ));
                 });
     }
 
-    private void removeRoomFromPlayerHistory(
-            ParticipantByRoomEntity player,
-            List<GameByRoomEntity> rounds) {
+    private void removeRoomFromPlayerHistory(ParticipantByRoomEntity player, List<GameByRoomEntity> rounds) {
         rounds.forEach(round -> gameByPlayerRepository.deleteByNormalizedPlayerNameAndGameId(
                 player.getNormalizedPlayerName(),
                 round.getGameId()
