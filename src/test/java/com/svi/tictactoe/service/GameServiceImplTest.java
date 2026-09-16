@@ -29,6 +29,8 @@ import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
+import com.svi.tictactoe.service.impl.RoomServiceImpl;
+import com.svi.tictactoe.service.support.PlayerGameSynchronizer;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -54,20 +56,24 @@ class GameServiceImplTest {
     @Test
     void coordinatesCreationJoiningAndSpectatorAssignment() {
         RepositoryHarness harness = new RepositoryHarness();
-        GameService service = harness.service();
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
 
-        CreateGameResponse game = service.createGame(new CreateGameRequest("Alice"));
-        JoinGameResponse secondPlayer = service.joinGame(game.roomCode(), joinRequest("Bob"));
-        JoinGameResponse spectator = service.joinGame(game.roomCode(), joinRequest("Charlie"));
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        JoinGameResponse secondPlayer = roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
+        JoinGameResponse spectator = roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
 
         assertNotNull(game.gameId());
         assertEquals(Symbol.X, game.player().symbol());
+        assertEquals(game.gameId(), secondPlayer.gameId());
+        assertEquals(game.gameId(), spectator.gameId());
         assertEquals(Symbol.O, secondPlayer.participant().symbol());
         assertEquals(PlayerType.SPECTATOR, spectator.participant().type());
         assertNull(spectator.participant().symbol());
-        assertEquals(1, service.getGameInfo(game.roomCode()).spectatorCount());
-        assertEquals(GameStatus.IN_PROGRESS, service.getGameInfo(game.roomCode()).status());
-        assertEquals(GameStatus.IN_PROGRESS, service.getBoardStatus(game.roomCode()).status());
+        assertEquals(1, gameService.getGame(game.gameId()).spectatorCount());
+        assertEquals(game.gameId(), roomService.getRoom(game.roomCode()).games().getFirst().gameId());
+        assertEquals(GameStatus.IN_PROGRESS, roomService.getRoom(game.roomCode()).games().getFirst().status());
+        assertEquals(GameStatus.IN_PROGRESS, gameService.getBoard(game.gameId()).status());
         assertEquals(
                 List.of(
                         MessageTopic.PLAYER_JOINED,
@@ -83,43 +89,45 @@ class GameServiceImplTest {
     @Test
     void coordinatesMovePlacementAndNextRound() {
         RepositoryHarness harness = new RepositoryHarness();
-        GameService service = harness.service();
-        CreateGameResponse game = service.createGame(new CreateGameRequest("Alice"));
-        service.joinGame(game.roomCode(), joinRequest("Bob"));
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
 
-        BoardResponse board = service.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
+        BoardResponse board = gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
         assertEquals(Symbol.X, board.grid()[0][0]);
         assertEquals(game.gameId(), board.gameId());
 
-        PlayAgainResponse nextRound = service.playAgain(game.roomCode());
+        PlayAgainResponse nextRound = roomService.playAgain(game.roomCode());
         assertEquals(2, nextRound.currentRound());
         assertEquals(game.roomCode(), nextRound.roomCode());
         assertNotEquals(game.gameId(), nextRound.gameId());
-        assertNull(service.getBoardStatus(game.roomCode()).grid()[0][0]);
+        assertNull(gameService.getBoard(nextRound.gameId()).grid()[0][0]);
     }
 
     @Test
     void keepsScoresAndSpectatorsWithTheRoomAcrossRounds() {
         RepositoryHarness harness = new RepositoryHarness();
-        GameService service = harness.service();
-        CreateGameResponse game = service.createGame(new CreateGameRequest("Alice"));
-        service.joinGame(game.roomCode(), joinRequest("Bob"));
-        service.joinGame(game.roomCode(), joinRequest("Charlie"));
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
 
-        service.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
-        service.placeMove(game.gameId(), new AddMoveRequest(1, 0, Symbol.O));
-        service.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.X));
-        service.placeMove(game.gameId(), new AddMoveRequest(1, 1, Symbol.O));
-        service.placeMove(game.gameId(), new AddMoveRequest(0, 2, Symbol.X));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(1, 0, Symbol.O));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.X));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(1, 1, Symbol.O));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 2, Symbol.X));
 
-        GameInfoResponse completedRound = service.getGameInfo(game.roomCode());
+        GameInfoResponse completedRound = gameService.getGame(game.gameId());
         assertEquals(1, completedRound.players().getFirst().score());
         assertEquals(1, completedRound.spectatorCount());
         assertEquals(GameStatus.COMPLETED, completedRound.status());
         assertEquals("Alice", completedRound.winner());
 
-        service.playAgain(game.roomCode());
-        GameInfoResponse nextRound = service.getGameInfo(game.roomCode());
+        PlayAgainResponse nextRoundResponse = roomService.playAgain(game.roomCode());
+        GameInfoResponse nextRound = gameService.getGame(nextRoundResponse.gameId());
         assertEquals(1, nextRound.players().getFirst().score());
         assertEquals(1, nextRound.spectatorCount());
         assertNull(nextRound.winner());
@@ -128,15 +136,16 @@ class GameServiceImplTest {
     @Test
     void recordsTheWinnerAndLoserInPlayerGameHistory() {
         RepositoryHarness harness = new RepositoryHarness();
-        GameService service = harness.service();
-        CreateGameResponse game = service.createGame(new CreateGameRequest("Alice"));
-        service.joinGame(game.roomCode(), joinRequest("Bob"));
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
 
-        service.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
-        service.placeMove(game.gameId(), new AddMoveRequest(1, 0, Symbol.O));
-        service.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.X));
-        service.placeMove(game.gameId(), new AddMoveRequest(1, 1, Symbol.O));
-        service.placeMove(game.gameId(), new AddMoveRequest(0, 2, Symbol.X));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(1, 0, Symbol.O));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.X));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(1, 1, Symbol.O));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 2, Symbol.X));
 
         assertEquals(Boolean.TRUE, harness.playerGames.get("alice").get(game.gameId()).getWon());
         assertEquals(Boolean.FALSE, harness.playerGames.get("bob").get(game.gameId()).getWon());
@@ -231,8 +240,21 @@ class GameServiceImplTest {
             });
         }
 
-        private GameService service() {
+        private GameService gameService() {
             return new GameServiceImpl(
+                    roomRepository,
+                    gameRepository,
+                    gameRoundRepository,
+                    participantRepository,
+                    moveRepository,
+                    playerGameSynchronizer(),
+                    gameEngine,
+                    eventPublisher
+            );
+        }
+
+        private RoomService roomService() {
+            return new RoomServiceImpl(
                     roomRepository,
                     roomCatalogRepository,
                     gameRepository,
@@ -241,9 +263,13 @@ class GameServiceImplTest {
                     moveRepository,
                     playerCatalogRepository,
                     playerGameRepository,
-                    gameEngine,
+                    playerGameSynchronizer(),
                     eventPublisher
             );
+        }
+
+        private PlayerGameSynchronizer playerGameSynchronizer() {
+            return new PlayerGameSynchronizer(playerCatalogRepository, playerGameRepository);
         }
     }
 }

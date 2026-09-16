@@ -9,8 +9,7 @@ public enum SuccessMessage {
     PLAYER_JOINED("Player joined successfully."),
     SPECTATOR_JOINED("Game already has two players. Joined as spectator."),
     GAME_INFO_RETRIEVED("Game information retrieved successfully."),
-    BOARD_STATUS_RETRIEVED("Latest Board Grid"),
-    GAME_DELETED("Game deleted successfully.");
+    BOARD_STATUS_RETRIEVED("Latest Board Grid");
 
     private final String message;
 

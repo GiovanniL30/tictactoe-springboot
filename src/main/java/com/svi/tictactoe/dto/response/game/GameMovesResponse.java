@@ -1,9 +1,9 @@
-package com.svi.tictactoe.dto.response.history;
+package com.svi.tictactoe.dto.response.game;
 
 import java.util.List;
 import java.util.UUID;
 
-public record GameMoveHistoryResponse(
+public record GameMovesResponse(
         UUID gameId,
         String roomCode,
         int round,

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "0e34e259-c30f-482c-aa49-d6767e38d21c",
     "name": "Tic Tac Toe API",
-    "description": "Requests for the Tic Tac Toe REST API. Run Create Game first; it automatically stores roomCode and gameId for the remaining requests.",
+    "description": "Requests for the Tic Tac Toe REST API. Run Create Room first; it automatically stores roomCode and gameId for the remaining requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -29,10 +29,47 @@
   ],
   "item": [
     {
-      "name": "Games",
+      "name": "Rooms",
       "item": [
         {
-          "name": "Create Game",
+          "name": "Get All Rooms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains room summaries', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.totalRooms).to.be.a('number');",
+                  "    pm.expect(response.totalGames).to.be.a('number');",
+                  "    pm.expect(response.rooms).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Room",
           "event": [
             {
               "listen": "test",
@@ -68,21 +105,21 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/games",
+              "raw": "{{baseUrl}}/api/v1/rooms",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "games"
+                "rooms"
               ]
             },
-            "description": "Creates a room with Alice as player X and saves roomCode/gameId as collection variables."
+            "description": "Creates a room with the requested player as X and saves roomCode/gameId as collection variables."
           }
         },
         {
-          "name": "Join Game as Second Player",
+          "name": "Join Room as Second Player",
           "event": [
             {
               "listen": "test",
@@ -96,7 +133,10 @@
                   "    const response = pm.response.json();",
                   "    pm.expect(response.participant.type).to.eql('PLAYER');",
                   "    pm.expect(response.participant.symbol).to.eql('O');",
-                  "});"
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('gameId', response.gameId);"
                 ]
               }
             }
@@ -119,7 +159,148 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/games/{{roomCode}}/join",
+              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}/join",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms",
+                "{{roomCode}}",
+                "join"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Room Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms",
+                "{{roomCode}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Play Again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('gameId', response.gameId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}/play-again",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms",
+                "{{roomCode}}",
+                "play-again"
+              ]
+            },
+            "description": "Starts the next round and replaces the gameId collection variable."
+          }
+        },
+        {
+          "name": "Delete Room",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.unset('roomCode');",
+                  "pm.collectionVariables.unset('gameId');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms",
+                "{{roomCode}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Games",
+      "item": [
+        {
+          "name": "Get Game Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -127,8 +308,78 @@
                 "api",
                 "v1",
                 "games",
-                "{{roomCode}}",
-                "join"
+                "{{gameId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Game Moves and Result",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains moves and result', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.moves).to.be.an('array');",
+                  "    pm.expect(response.result).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/moves",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "games",
+                "{{gameId}}",
+                "moves"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Board Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/games/{{gameId}}/board",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "games",
+                "{{gameId}}",
+                "board"
               ]
             }
           }
@@ -179,232 +430,6 @@
               ]
             },
             "description": "Coordinates range from 0 to 2. Alternate symbol between X and O for subsequent requests."
-          }
-        },
-        {
-          "name": "Get Game Info",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/games/{{roomCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "games",
-                "{{roomCode}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Board Status",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/games/{{roomCode}}/board",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "games",
-                "{{roomCode}}",
-                "board"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Play Again",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const response = pm.response.json();",
-                  "pm.collectionVariables.set('gameId', response.gameId);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/games/{{roomCode}}/play-again",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "games",
-                "{{roomCode}}",
-                "play-again"
-              ]
-            },
-            "description": "Starts the next round and replaces the gameId collection variable."
-          }
-        },
-        {
-          "name": "Delete Room",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.collectionVariables.unset('roomCode');",
-                  "pm.collectionVariables.unset('gameId');"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/games/{{roomCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "games",
-                "{{roomCode}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "History",
-      "item": [
-        {
-          "name": "Get All Room Histories",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('Response contains history summary', function () {",
-                  "    const response = pm.response.json();",
-                  "    pm.expect(response.totalRooms).to.be.a('number');",
-                  "    pm.expect(response.totalGames).to.be.a('number');",
-                  "    pm.expect(response.rooms).to.be.an('array');",
-                  "    response.rooms.forEach(function (room) {",
-                  "        pm.expect(room.roomCode).to.be.a('string');",
-                  "        pm.expect(room.games).to.be.an('array');",
-                  "        room.games.forEach(function (game) {",
-                  "            pm.expect(game).to.have.all.keys('gameId', 'status', 'winner');",
-                  "            pm.expect(game).not.to.have.property('roomCode');",
-                  "        });",
-                  "    });",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/history/rooms",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "history",
-                "rooms"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Game Moves and Result",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('Response contains moves and result', function () {",
-                  "    const response = pm.response.json();",
-                  "    pm.expect(response.moves).to.be.an('array');",
-                  "    pm.expect(response.result).to.be.an('object');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/history/games/{{gameId}}/moves",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "history",
-                "games",
-                "{{gameId}}",
-                "moves"
-              ]
-            }
           }
         }
       ]

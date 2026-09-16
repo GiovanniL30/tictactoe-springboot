@@ -6,15 +6,16 @@ All routes are relative to `http://localhost:8080`. Requests and responses use J
 
 | Method | Route | Use case |
 |---|---|---|
-| `POST` | `/api/v1/games` | Create a room and its first game round |
-| `POST` | `/api/v1/games/{roomCode}/join` | Join a room as player O or as a spectator |
-| `POST` | `/api/v1/games/{gameId}/move` | Place a move in the active round |
-| `GET` | `/api/v1/games/{roomCode}` | Get room and active-game information |
-| `GET` | `/api/v1/games/{roomCode}/board` | Get the active board |
-| `POST` | `/api/v1/games/{roomCode}/play-again` | Start another round in the room |
-| `DELETE` | `/api/v1/games/{roomCode}` | Delete the room and its game data |
-| `GET` | `/api/v1/history/rooms` | List room and round history |
-| `GET` | `/api/v1/history/games/{gameId}/moves` | Get a round's moves and result |
+| `GET` | `/api/v1/rooms` | List rooms and their game summaries |
+| `POST` | `/api/v1/rooms` | Create a room and its first game round |
+| `POST` | `/api/v1/rooms/{roomCode}/join` | Join a room as player O or as a spectator |
+| `GET` | `/api/v1/rooms/{roomCode}` | Get the games belonging to one room |
+| `POST` | `/api/v1/rooms/{roomCode}/play-again` | Start another round in the room |
+| `DELETE` | `/api/v1/rooms/{roomCode}` | Delete the room and its game data |
+| `GET` | `/api/v1/games/{gameId}` | Get full information for one game |
+| `GET` | `/api/v1/games/{gameId}/board` | Get a game's board |
+| `GET` | `/api/v1/games/{gameId}/moves` | Get a game's moves and result |
+| `POST` | `/api/v1/games/{gameId}/move` | Place a move in the active game |
 | `GET` | `/api/v1/players` | List known players |
 | `GET` | `/api/v1/players/{playerName}/games` | Get one player's game history |
 
@@ -30,11 +31,11 @@ All routes are relative to `http://localhost:8080`. Requests and responses use J
 - A winning player's score increases by one. A completed draw has `winner: "DRAW"`; otherwise `winner` is the winning player's display name.
 - Empty board positions and unavailable values such as `currentTurn`, `winner`, and a spectator's `symbol` are returned as `null`.
 
-## Game routes
+## Room routes
 
-### Create a game
+### Create a room
 
-`POST /api/v1/games`
+`POST /api/v1/rooms`
 
 Creates a room, round 1, and player X. The game initially waits for a second player.
 
@@ -64,9 +65,9 @@ Success: `201 Created`
 }
 ```
 
-### Join a game
+### Join a room
 
-`POST /api/v1/games/{roomCode}/join`
+`POST /api/v1/rooms/{roomCode}/join`
 
 Adds the second participant as player O and changes the game to `IN_PROGRESS`. If X and O already exist, the participant joins as a spectator instead.
 
@@ -85,6 +86,7 @@ Success for player O: `200 OK`
 ```json
 {
   "message": "Player joined successfully.",
+  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
   "participant": {
     "playerName": "Vanni",
     "score": 0,
@@ -99,12 +101,185 @@ Success for a spectator: `200 OK`
 ```json
 {
   "message": "Game already has two players. Joined as spectator.",
+  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
   "participant": {
     "playerName": "Observer",
     "score": 0,
     "symbol": null,
     "type": "SPECTATOR"
   }
+}
+```
+
+### List rooms
+
+`GET /api/v1/rooms`
+
+Returns every room with a summary of its games.
+
+Request body: none.
+
+Success: `200 OK`
+
+```json
+{
+  "totalRooms": 1,
+  "totalGames": 2,
+  "rooms": [
+    {
+      "roomCode": "H9LL",
+      "games": [
+        {
+          "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+          "status": "COMPLETED",
+          "winner": "Gio"
+        },
+        {
+          "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
+          "status": "IN_PROGRESS"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Get room information
+
+`GET /api/v1/rooms/{roomCode}`
+
+Returns only the room code and the ID, status, and winner of each game in the room.
+
+Request body: none.
+
+Success: `200 OK`
+
+```json
+{
+  "roomCode": "H9LL",
+  "games": [
+    {
+      "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+      "status": "COMPLETED",
+      "winner": "Gio"
+    },
+    {
+      "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
+      "status": "IN_PROGRESS"
+    }
+  ]
+}
+```
+
+### Start another round
+
+`POST /api/v1/rooms/{roomCode}/play-again`
+
+Completes the previous round if needed and starts the next round with an empty board. Both players must already be present. Scores and spectators remain attached to the room.
+
+Request body: none.
+
+Success: `200 OK`
+
+```json
+{
+  "message": "New round started.",
+  "roomCode": "H9LL",
+  "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
+  "currentRound": 2,
+  "currentTurn": "X"
+}
+```
+
+Use the new `gameId` when placing moves in the new round.
+
+### Delete a room
+
+`DELETE /api/v1/rooms/{roomCode}`
+
+Deletes the room, all its games and moves, its participants, and the associated player-game history. The response contains the room summary captured immediately before deletion.
+
+Request body: none.
+
+Success: `200 OK`
+
+```json
+{
+  "roomCode": "H9LL",
+  "games": [
+    {
+      "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+      "status": "COMPLETED",
+      "winner": "Gio"
+    },
+    {
+      "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
+      "status": "IN_PROGRESS"
+    }
+  ]
+}
+```
+
+## Game routes
+
+### Get game information
+
+`GET /api/v1/games/{gameId}`
+
+Returns the selected game's players, scores, board state metadata, status, and winner.
+
+Request body: none.
+
+Success: `200 OK`
+
+```json
+{
+  "players": [
+    {
+      "playerName": "Gio",
+      "score": 1,
+      "symbol": "X",
+      "type": "PLAYER"
+    },
+    {
+      "playerName": "Vanni",
+      "score": 0,
+      "symbol": "O",
+      "type": "PLAYER"
+    }
+  ],
+  "roomCode": "H9LL",
+  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+  "round": 1,
+  "currentTurn": null,
+  "spectatorCount": 1,
+  "status": "COMPLETED",
+  "winner": "Gio",
+  "message": "Game information retrieved successfully."
+}
+```
+
+### Get the board
+
+`GET /api/v1/games/{gameId}/board`
+
+Returns the board, turn, and status for the selected game.
+
+Request body: none.
+
+Success: `200 OK`
+
+```json
+{
+  "message": "Latest Board Grid",
+  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+  "grid": [
+    ["X", "X", "X"],
+    ["O", "O", null],
+    [null, null, null]
+  ],
+  "currentTurn": null,
+  "status": "COMPLETED"
 }
 ```
 
@@ -144,165 +319,9 @@ Success: `200 OK`
 
 When the move wins the round, `status` becomes `COMPLETED` and `currentTurn` becomes `null`.
 
-### Get game information
+### Get a game's moves
 
-`GET /api/v1/games/{roomCode}`
-
-Returns the room's active round, players, scores, current turn, winner, and spectator count.
-
-Request body: none.
-
-Success: `200 OK`
-
-```json
-{
-  "players": [
-    {
-      "playerName": "Gio",
-      "score": 1,
-      "symbol": "X",
-      "type": "PLAYER"
-    },
-    {
-      "playerName": "Vanni",
-      "score": 0,
-      "symbol": "O",
-      "type": "PLAYER"
-    }
-  ],
-  "roomCode": "H9LL",
-  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
-  "round": 1,
-  "currentTurn": null,
-  "spectatorCount": 1,
-  "status": "COMPLETED",
-  "winner": "Gio",
-  "message": "Game information retrieved successfully."
-}
-```
-
-### Get the board
-
-`GET /api/v1/games/{roomCode}/board`
-
-Returns the latest board, turn, and status for the room's active round.
-
-Request body: none.
-
-Success: `200 OK`
-
-```json
-{
-  "message": "Latest Board Grid",
-  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
-  "grid": [
-    ["X", "X", "X"],
-    ["O", "O", null],
-    [null, null, null]
-  ],
-  "currentTurn": null,
-  "status": "COMPLETED"
-}
-```
-
-### Start another round
-
-`POST /api/v1/games/{roomCode}/play-again`
-
-Completes the previous round if needed and starts the next round with an empty board. Both players must already be present. Scores and spectators remain attached to the room.
-
-Request body: none.
-
-Success: `200 OK`
-
-```json
-{
-  "message": "New round started.",
-  "roomCode": "H9LL",
-  "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
-  "currentRound": 2,
-  "currentTurn": "X"
-}
-```
-
-Use the new `gameId` when placing moves in the new round.
-
-### Delete a game room
-
-`DELETE /api/v1/games/{roomCode}`
-
-Deletes the room, all its rounds and moves, its participants, and the associated player-game history. The response contains the active game information captured immediately before deletion.
-
-Request body: none.
-
-Success: `200 OK`
-
-```json
-{
-  "players": [
-    {
-      "playerName": "Gio",
-      "score": 1,
-      "symbol": "X",
-      "type": "PLAYER"
-    },
-    {
-      "playerName": "Vanni",
-      "score": 0,
-      "symbol": "O",
-      "type": "PLAYER"
-    }
-  ],
-  "roomCode": "H9LL",
-  "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
-  "round": 2,
-  "currentTurn": "X",
-  "spectatorCount": 0,
-  "status": "IN_PROGRESS",
-  "winner": null,
-  "message": "Game deleted successfully."
-}
-```
-
-## History routes
-
-### List room histories
-
-`GET /api/v1/history/rooms`
-
-Returns all existing rooms and a summary of every round in each room.
-
-Request body: none.
-
-Success: `200 OK`
-
-```json
-{
-  "totalRooms": 1,
-  "totalGames": 2,
-  "rooms": [
-    {
-      "roomCode": "H9LL",
-      "games": [
-        {
-          "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
-          "status": "COMPLETED",
-          "winner": "Gio"
-        },
-        {
-          "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
-          "status": "IN_PROGRESS",
-          "winner": null
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Get a game's move history
-
-`GET /api/v1/history/games/{gameId}/moves`
+`GET /api/v1/games/{gameId}/moves`
 
 Returns all moves for one round in move-number order, followed by the round's current result.
 
@@ -441,8 +460,8 @@ Common errors:
 
 ## Typical gameplay sequence
 
-1. Create a room with `POST /api/v1/games` and retain both `roomCode` and `gameId`.
-2. Join player O with `POST /api/v1/games/{roomCode}/join`.
+1. Create a room with `POST /api/v1/rooms` and retain both `roomCode` and `gameId`.
+2. Join player O with `POST /api/v1/rooms/{roomCode}/join`.
 3. Alternate moves with `POST /api/v1/games/{gameId}/move`, beginning with X.
 4. Inspect the room or board with the corresponding `GET` route.
-5. After completion, start another round with `POST /api/v1/games/{roomCode}/play-again` and use the newly returned `gameId`.
+5. After completion, start another round with `POST /api/v1/rooms/{roomCode}/play-again` and use the newly returned `gameId`.

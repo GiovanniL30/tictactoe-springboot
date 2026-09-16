@@ -8,14 +8,18 @@ import com.svi.tictactoe.entity.ParticipantEntity;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 public final class PlayerMapper {
 
     private PlayerMapper() {
     }
 
-    public static JoinGameResponse toJoinGameResponse(ParticipantEntity participant, String message) {
-        return new JoinGameResponse(message, toParticipantResponse(participant));
+    public static JoinGameResponse toJoinGameResponse(
+            ParticipantEntity participant,
+            UUID gameId,
+            String message) {
+        return new JoinGameResponse(message, gameId, toParticipantResponse(participant));
     }
 
     public static ParticipantResponse toParticipantResponse(ParticipantEntity entity) {

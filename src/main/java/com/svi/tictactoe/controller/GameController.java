@@ -1,16 +1,11 @@
 package com.svi.tictactoe.controller;
 
 import com.svi.tictactoe.dto.request.AddMoveRequest;
-import com.svi.tictactoe.dto.request.CreateGameRequest;
-import com.svi.tictactoe.dto.request.JoinGameRequest;
 import com.svi.tictactoe.dto.response.game.BoardResponse;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
 import com.svi.tictactoe.dto.response.game.GameInfoResponse;
-import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
+import com.svi.tictactoe.dto.response.game.GameMovesResponse;
 import com.svi.tictactoe.service.GameService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,39 +21,24 @@ public class GameController {
         this.gameService = gameService;
     }
 
-    @PostMapping
-    public ResponseEntity<CreateGameResponse> createGame(@Valid @RequestBody CreateGameRequest requestBody) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(gameService.createGame(requestBody));
+    @GetMapping("/{gameId}")
+    public ResponseEntity<GameInfoResponse> getGame(@PathVariable UUID gameId) {
+        return ResponseEntity.ok(gameService.getGame(gameId));
+    }
+
+    @GetMapping("/{gameId}/board")
+    public ResponseEntity<BoardResponse> getBoard(@PathVariable UUID gameId) {
+        return ResponseEntity.ok(gameService.getBoard(gameId));
+    }
+
+    @GetMapping("/{gameId}/moves")
+    public ResponseEntity<GameMovesResponse> getMoves(@PathVariable UUID gameId) {
+        return ResponseEntity.ok(gameService.getMoves(gameId));
     }
 
     @PostMapping("/{gameId}/move")
     public ResponseEntity<BoardResponse> addMove(@PathVariable UUID gameId, @Valid @RequestBody AddMoveRequest requestBody) {
         return ResponseEntity.ok(gameService.placeMove(gameId, requestBody));
-    }
-
-    @PostMapping("/{roomCode}/play-again")
-    public ResponseEntity<PlayAgainResponse> playAgain(@PathVariable String roomCode) {
-        return ResponseEntity.ok(gameService.playAgain(roomCode));
-    }
-
-    @PostMapping("/{roomCode}/join")
-    public ResponseEntity<JoinGameResponse> joinGame(@PathVariable String roomCode, @Valid @RequestBody JoinGameRequest requestBody) {
-        return ResponseEntity.ok(gameService.joinGame(roomCode, requestBody));
-    }
-
-    @GetMapping("/{roomCode}")
-    public ResponseEntity<GameInfoResponse> getGameInfo(@PathVariable String roomCode) {
-        return ResponseEntity.ok(gameService.getGameInfo(roomCode));
-    }
-
-    @GetMapping("/{roomCode}/board")
-    public ResponseEntity<BoardResponse> checkBoardStatus(@PathVariable String roomCode) {
-        return ResponseEntity.ok(gameService.getBoardStatus(roomCode));
-    }
-
-    @DeleteMapping("/{roomCode}")
-    public ResponseEntity<GameInfoResponse> deleteRoom(@PathVariable String roomCode) {
-        return ResponseEntity.ok(gameService.deleteGame(roomCode));
     }
 
 }
