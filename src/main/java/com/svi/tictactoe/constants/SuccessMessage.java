@@ -3,6 +3,7 @@ package com.svi.tictactoe.constants;
 public enum SuccessMessage {
 
     GAME_CREATED("Game created successfully."),
+    GAME_COMPLETED("Game completed."),
     MOVE_PLACED("Move placed successfully."),
     NEW_ROUND_STARTED("New round started."),
     PLAYER_JOINED("Player joined successfully."),

@@ -2,6 +2,7 @@ package com.svi.tictactoe.service;
 
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.GameStatus;
+import com.svi.tictactoe.constants.MessageTopic;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
@@ -26,8 +27,10 @@ import com.svi.tictactoe.repository.cassandra.ParticipantRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
 import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
+import com.svi.tictactoe.realtime.event.RealtimeEvent;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,6 +68,16 @@ class GameServiceImplTest {
         assertEquals(1, service.getGameInfo(game.roomCode()).spectatorCount());
         assertEquals(GameStatus.IN_PROGRESS, service.getGameInfo(game.roomCode()).status());
         assertEquals(GameStatus.IN_PROGRESS, service.getBoardStatus(game.roomCode()).status());
+        assertEquals(
+                List.of(
+                        MessageTopic.PLAYER_JOINED,
+                        MessageTopic.PLAYER_JOINED
+                ),
+                harness.publishedEvents.stream()
+                        .map(RealtimeEvent.class::cast)
+                        .map(RealtimeEvent::topic)
+                        .toList()
+        );
     }
 
     @Test
@@ -144,6 +157,8 @@ class GameServiceImplTest {
         private final PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
         private final PlayerGameRepository playerGameRepository = mock(PlayerGameRepository.class);
         private final GameEngine gameEngine = new GameEngine();
+        private final List<Object> publishedEvents = new ArrayList<>();
+        private final ApplicationEventPublisher eventPublisher = publishedEvents::add;
 
         private final Map<String, RoomEntity> rooms = new HashMap<>();
         private final Map<UUID, GameEntity> games = new HashMap<>();
@@ -226,7 +241,8 @@ class GameServiceImplTest {
                     moveRepository,
                     playerCatalogRepository,
                     playerGameRepository,
-                    gameEngine
+                    gameEngine,
+                    eventPublisher
             );
         }
     }
