@@ -11,10 +11,12 @@ import com.svi.tictactoe.exception.*;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.RoomMapper;
+import com.svi.tictactoe.realtime.event.RealtimeEvent;
 import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.util.BoardUtil;
 import com.svi.tictactoe.util.CodeGenerator;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -37,6 +39,7 @@ public class GameServiceImpl implements GameService {
     private final PlayerCatalogRepository playerCatalogRepository;
     private final PlayerGameRepository playerGameRepository;
     private final GameEngine gameEngine;
+    private final ApplicationEventPublisher eventPublisher;
 
     public GameServiceImpl(
             RoomRepository roomRepository,
@@ -47,7 +50,8 @@ public class GameServiceImpl implements GameService {
             GameMoveRepository moveRepository,
             PlayerCatalogRepository playerCatalogRepository,
             PlayerGameRepository playerGameRepository,
-            GameEngine gameEngine) {
+            GameEngine gameEngine,
+            ApplicationEventPublisher eventPublisher) {
         this.roomRepository = roomRepository;
         this.roomCatalogRepository = roomCatalogRepository;
         this.gameRepository = gameRepository;
@@ -57,6 +61,7 @@ public class GameServiceImpl implements GameService {
         this.playerCatalogRepository = playerCatalogRepository;
         this.playerGameRepository = playerGameRepository;
         this.gameEngine = gameEngine;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -184,7 +189,19 @@ public class GameServiceImpl implements GameService {
             syncGameForPlayers(game, participants);
         }
 
-        return GameMapper.toBoardResponse(game, SuccessMessage.MOVE_PLACED.getMessage());
+        BoardResponse response = GameMapper.toBoardResponse(game, SuccessMessage.MOVE_PLACED.getMessage());
+        publishRealtime(game.getGameId().toString(), MessageTopic.MOVE_PLACED, response);
+
+        if (roundCompleted) {
+            GameInfoResponse completedGame = toGameInfoResponse(
+                    game,
+                    participants,
+                    SuccessMessage.GAME_COMPLETED.getMessage()
+            );
+            publishRealtime(game.getRoomCode(), MessageTopic.GAME_COMPLETED, completedGame);
+        }
+
+        return response;
     }
 
     @Override
@@ -230,7 +247,13 @@ public class GameServiceImpl implements GameService {
         gameRoundRepository.save(nextGameRound);
         syncGameForPlayers(nextGame, participants);
 
-        return RoomMapper.toPlayAgainResponse(room, SuccessMessage.NEW_ROUND_STARTED.getMessage());
+        PlayAgainResponse response = RoomMapper.toPlayAgainResponse(
+                room,
+                SuccessMessage.NEW_ROUND_STARTED.getMessage()
+        );
+
+        publishRealtime(roomCode, MessageTopic.NEW_ROUND_STARTED, response);
+        return response;
     }
 
     @Override
@@ -258,12 +281,17 @@ public class GameServiceImpl implements GameService {
         );
 
         participantRepository.save(participant);
+        participants.add(participant);
+
+        String message = type == PlayerType.PLAYER
+                ? SuccessMessage.PLAYER_JOINED.getMessage()
+                : SuccessMessage.SPECTATOR_JOINED.getMessage();
+        JoinGameResponse response = PlayerMapper.toJoinGameResponse(participant, message);
+        GameEntity game = requireGame(room.getActiveGameId());
 
         if (type == PlayerType.PLAYER) {
-            GameEntity game = requireGame(room.getActiveGameId());
             room.setStatus(GameStatus.IN_PROGRESS.name());
             game.setStatus(GameStatus.IN_PROGRESS.name());
-            participants.add(participant);
 
             roomRepository.save(room);
             gameRepository.save(game);
@@ -271,9 +299,12 @@ public class GameServiceImpl implements GameService {
             syncGameForPlayers(game, participants);
         }
 
-        String message = type == PlayerType.PLAYER ? SuccessMessage.PLAYER_JOINED.getMessage() : SuccessMessage.SPECTATOR_JOINED.getMessage();
-
-        return PlayerMapper.toJoinGameResponse(participant, message);
+        publishRealtime(
+                roomCode,
+                MessageTopic.PLAYER_JOINED,
+                toGameInfoResponse(game, participants, message)
+        );
+        return response;
     }
 
     @Override
@@ -314,6 +345,7 @@ public class GameServiceImpl implements GameService {
         roomCatalogRepository.delete(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, roomCode));
         roomRepository.deleteById(roomCode);
 
+        publishRealtime(roomCode, MessageTopic.GAME_DELETED, response);
         return response;
     }
 
@@ -409,6 +441,9 @@ public class GameServiceImpl implements GameService {
                 .count();
     }
 
+    private <T> void publishRealtime(String destinationId, MessageTopic topic, T payload) {
+        eventPublisher.publishEvent(new RealtimeEvent<>(destinationId, topic, payload));
+    }
 
     private String generateUniqueRoomCode() {
         String roomCode;
