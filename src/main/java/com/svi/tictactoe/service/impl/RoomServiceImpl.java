@@ -296,12 +296,6 @@ public class RoomServiceImpl implements RoomService {
 
         Instant now = Instant.now();
         GameEntity previousGame = requireGame(room.getActiveGameId());
-        if (!GameStatus.COMPLETED.name().equals(previousGame.getStatus())) {
-            previousGame.setStatus(GameStatus.COMPLETED.name());
-            previousGame.setCurrentTurn(null);
-            gameRepository.save(previousGame);
-        }
-
         finishRound(room);
         playerGameSynchronizer.sync(previousGame, players);
 
