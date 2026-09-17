@@ -7,6 +7,7 @@ public enum ErrorMessage {
     GAME_ID_NOT_FOUND("Game with id '%s' was not found."),
     GAME_NOT_STARTED("Game requires two players before it can start."),
     GAME_ALREADY_FINISHED("This round is already finished. Start a new round to continue."),
+    ROOM_INACTIVE("This room is no longer active because a player has left."),
     PLAYER_ALREADY_EXISTS("Player name '%s' is already in use."),
     PLAYER_NOT_FOUND("Player '%s' was not found."),
     OPPONENT_OF_PLAYER_NOT_FOUND("Opponent for player '%s' was not found."),

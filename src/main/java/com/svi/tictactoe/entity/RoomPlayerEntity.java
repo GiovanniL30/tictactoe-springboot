@@ -31,6 +31,9 @@ public class RoomPlayerEntity {
     @Column("joined_at")
     private Instant joinedAt;
 
+    @Column("is_active")
+    private boolean isActive;
+
     public RoomPlayerEntity() {
     }
 
@@ -41,7 +44,8 @@ public class RoomPlayerEntity {
             String playerType,
             String symbol,
             Integer score,
-            Instant joinedAt) {
+            Instant joinedAt,
+            boolean isActive) {
         this.roomCode = roomCode;
         this.normalizedPlayerName = normalizedPlayerName;
         this.playerName = playerName;
@@ -49,6 +53,7 @@ public class RoomPlayerEntity {
         this.symbol = symbol;
         this.score = score;
         this.joinedAt = joinedAt;
+        this.isActive = isActive;
     }
 
     public String getRoomCode() {
@@ -105,5 +110,13 @@ public class RoomPlayerEntity {
 
     public void setJoinedAt(Instant joinedAt) {
         this.joinedAt = joinedAt;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
     }
 }

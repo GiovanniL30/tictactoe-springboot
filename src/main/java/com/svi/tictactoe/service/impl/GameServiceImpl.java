@@ -85,6 +85,8 @@ public class GameServiceImpl implements GameService {
     @Override
     public BoardResponse placeMove(UUID gameId, AddMoveRequest requestBody) {
         GameEntity game = requireActiveGame(gameId);
+        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(game.getRoomCode());
+        requireActiveRoom(players);
 
         if (GameStatus.WAITING_FOR_PLAYERS.name().equals(game.getStatus())) {
             throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
@@ -117,7 +119,6 @@ public class GameServiceImpl implements GameService {
         int moveNumber = game.getMoveCount() == null ? 1 : game.getMoveCount() + 1;
         game.setMoveCount(moveNumber);
 
-        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(game.getRoomCode());
         RoomPlayerEntity movingPlayer = findPlayerBySymbol(players, currentTurn);
 
         moveRepository.save(new GameMoveEntity(
@@ -216,6 +217,16 @@ public class GameServiceImpl implements GameService {
                 .filter(player -> symbol.name().equals(player.getSymbol()))
                 .findFirst()
                 .orElseThrow(() -> new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage()));
+    }
+
+    private void requireActiveRoom(List<RoomPlayerEntity> players) {
+        boolean hasInactivePlayer = players.stream()
+                .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
+                .anyMatch(player -> !player.isActive());
+
+        if (hasInactivePlayer) {
+            throw new RoomInactiveException(ErrorMessage.ROOM_INACTIVE.getMessage());
+        }
     }
 
     private MoveResponse toMoveResponse(GameMoveEntity move) {

@@ -20,6 +20,7 @@ import com.svi.tictactoe.entity.GameRoundEntity;
 import com.svi.tictactoe.entity.GameMoveEntity;
 import com.svi.tictactoe.entity.RoomPlayerEntity;
 import com.svi.tictactoe.entity.RoomEntity;
+import com.svi.tictactoe.exception.RoomInactiveException;
 import com.svi.tictactoe.repository.cassandra.GameRepository;
 import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
 import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
@@ -46,9 +47,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -205,6 +208,76 @@ class GameServiceImplTest {
         assertEquals(Boolean.FALSE, harness.playerGames.get("bob").get(game.gameId()).getWon());
     }
 
+    @Test
+    void closesTheRoomForJoiningMovingAndRestartingAfterAPlayerLeaves() {
+        RepositoryHarness harness = new RepositoryHarness();
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
+
+        roomService.leaveRoom(game.roomCode(), "Alice");
+
+        assertEquals(
+                2,
+                harness.roomPlayers.get(game.roomCode()).stream()
+                        .filter(player -> !player.isActive())
+                        .count()
+        );
+        assertEquals(
+                0,
+                harness.roomPlayers.get(game.roomCode()).stream()
+                        .filter(player -> PlayerType.SPECTATOR.name().equals(player.getPlayerType()))
+                        .count()
+        );
+        assertThrows(
+                RoomInactiveException.class,
+                () -> roomService.joinRoom(game.roomCode(), joinRequest("Dave"))
+        );
+        assertThrows(
+                RoomInactiveException.class,
+                () -> gameService.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.O))
+        );
+        assertThrows(
+                RoomInactiveException.class,
+                () -> roomService.playAgain(game.roomCode())
+        );
+    }
+
+    @Test
+    void removesOnlyTheSpectatorWhenASpectatorLeaves() {
+        RepositoryHarness harness = new RepositoryHarness();
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
+
+        LeaveGameResponse response = roomService.leaveRoom(game.roomCode(), "Charlie");
+
+        assertEquals("Player left the room.", response.message());
+        assertEquals(2, harness.roomPlayers.get(game.roomCode()).size());
+        assertEquals(
+                0,
+                harness.roomPlayers.get(game.roomCode()).stream()
+                        .filter(player -> "Charlie".equals(player.getPlayerName()))
+                        .count()
+        );
+        assertEquals(
+                2,
+                harness.roomPlayers.get(game.roomCode()).stream()
+                        .filter(RoomPlayerEntity::isActive)
+                        .count()
+        );
+        assertEquals(GameStatus.IN_PROGRESS, gameService.getGame(game.gameId()).status());
+        assertEquals(
+                PlayerType.SPECTATOR,
+                roomService.joinRoom(game.roomCode(), joinRequest("Dave")).player().type()
+        );
+    }
+
     private JoinGameRequest joinRequest(String playerName) {
         return new JoinGameRequest(playerName);
     }
@@ -279,6 +352,15 @@ class GameServiceImplTest {
                 playersInRoom.add(entity);
                 return entity;
             });
+            doAnswer(invocation -> {
+                RoomPlayerEntity entity = invocation.getArgument(0);
+                List<RoomPlayerEntity> playersInRoom = roomPlayers.get(entity.getRoomCode());
+                if (playersInRoom != null) {
+                    playersInRoom.removeIf(player -> player.getNormalizedPlayerName()
+                            .equals(entity.getNormalizedPlayerName()));
+                }
+                return null;
+            }).when(roomPlayerRepository).delete(any(RoomPlayerEntity.class));
 
             when(moveRepository.save(any(GameMoveEntity.class))).thenAnswer(invocation -> {
                 GameMoveEntity entity = invocation.getArgument(0);

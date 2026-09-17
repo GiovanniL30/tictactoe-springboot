@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS game_rounds (
 ) WITH CLUSTERING ORDER BY (round_no ASC);
 
 -- Room-lifetime membership. Scores and spectators survive game-id changes.
+-- When either player leaves, both player rows become inactive and spectator rows are deleted.
 CREATE TABLE IF NOT EXISTS room_players (
     room_code text,
     normalized_player_name text,
@@ -54,6 +55,7 @@ CREATE TABLE IF NOT EXISTS room_players (
     symbol text,
     score int,
     joined_at timestamp,
+    is_active boolean,
     PRIMARY KEY (room_code, normalized_player_name)
 );
 
