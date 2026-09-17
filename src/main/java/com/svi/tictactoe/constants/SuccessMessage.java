@@ -6,6 +6,7 @@ public enum SuccessMessage {
     GAME_COMPLETED("Game completed."),
     MOVE_PLACED("Move placed successfully."),
     NEW_ROUND_STARTED("New round started."),
+    PLAYER_LEFT("Player left the room."),
     PLAYER_JOINED("Player joined successfully."),
     SPECTATOR_JOINED("Game already has two players. Joined as spectator."),
     GAME_INFO_RETRIEVED("Game information retrieved successfully."),

@@ -9,6 +9,7 @@ public enum ErrorMessage {
     GAME_ALREADY_FINISHED("This round is already finished. Start a new round to continue."),
     PLAYER_ALREADY_EXISTS("Player name '%s' is already in use."),
     PLAYER_NOT_FOUND("Player '%s' was not found."),
+    OPPONENT_OF_PLAYER_NOT_FOUND("Opponent for player '%s' was not found."),
     INVALID_TURN("It is player '%s''s turn."),
     INVALID_POSITION("Position (%d, %d) is invalid."),
     VALIDATION_FAILED("Validation failed."),

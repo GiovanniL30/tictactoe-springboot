@@ -4,6 +4,7 @@ import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
 import com.svi.tictactoe.dto.response.game.CreateGameResponse;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
+import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
 import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
 import com.svi.tictactoe.dto.response.room.RoomsResponse;
@@ -46,6 +47,11 @@ public class RoomController {
     @PostMapping("/{roomCode}/play-again")
     public ResponseEntity<PlayAgainResponse> playAgain(@PathVariable String roomCode) {
         return ResponseEntity.ok(roomService.playAgain(roomCode));
+    }
+
+    @PostMapping("/{roomCode}/leave/{playerName}")
+    public ResponseEntity<LeaveGameResponse> leaveRoom(@PathVariable String roomCode, @PathVariable String playerName) {
+        return ResponseEntity.ok(roomService.leaveRoom(roomCode, playerName));
     }
 
     @DeleteMapping("/{roomCode}")

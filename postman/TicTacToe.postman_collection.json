@@ -206,6 +206,45 @@
           }
         },
         {
+          "name": "Leave Room",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response confirms the player left', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.message).to.eql('Player left the room.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}/leave/{{playerName}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms",
+                "{{roomCode}}",
+                "leave",
+                "{{playerName}}"
+              ]
+            },
+            "description": "Completes the active round when playerName leaves. If that player already placed a move, the opponent wins and receives one point; otherwise the round completes without a winner. Set playerName to Gio or Vanni before sending."
+          }
+        },
+        {
           "name": "Play Again",
           "event": [
             {
