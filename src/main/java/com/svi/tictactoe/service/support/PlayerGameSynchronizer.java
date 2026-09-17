@@ -26,6 +26,11 @@ public class PlayerGameSynchronizer {
         this.playerGameRepository = playerGameRepository;
     }
 
+    /**
+     * When this method is called, this makes the list of player updated
+     * - creates player on the catalog for searching
+     * - if the game passed have a winner, makes the player entry win to true
+     * */
     public void sync(GameEntity game, List<RoomPlayerEntity> players) {
         players.stream()
                 .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))

@@ -84,6 +84,7 @@ public class RoomServiceImpl implements RoomService {
                 0,
                 GameMapper.emptyBoard()
         );
+
         GameRoundEntity gameRound = new GameRoundEntity(
                 roomCode,
                 1,
@@ -92,6 +93,7 @@ public class RoomServiceImpl implements RoomService {
                 now,
                 null
         );
+
         RoomPlayerEntity creator = new RoomPlayerEntity(
                 roomCode,
                 normalize(requestBody.playerName()),
@@ -130,6 +132,7 @@ public class RoomServiceImpl implements RoomService {
             throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(requestBody.playerName()));
         }
 
+        //if there are already 2 players, make other spectator
         long playerCount = playerCount(players);
         PlayerType type = playerCount < REQUIRED_PLAYER_COUNT ? PlayerType.PLAYER : PlayerType.SPECTATOR;
         Symbol symbol = type == PlayerType.SPECTATOR ? null : (playerCount == 0 ? Symbol.X : Symbol.O);
@@ -158,6 +161,7 @@ public class RoomServiceImpl implements RoomService {
                 message
         );
 
+        // the second player joining will always be a type of "Player" so we can now start the game
         if (type == PlayerType.PLAYER) {
             room.setStatus(GameStatus.IN_PROGRESS.name());
             game.setStatus(GameStatus.IN_PROGRESS.name());
@@ -187,6 +191,7 @@ public class RoomServiceImpl implements RoomService {
                 .findFirst()
                 .orElseThrow(() -> new PlayerNotFoundException(ErrorMessage.PLAYER_NOT_FOUND.format(playerName)));
 
+        // if player is spectator, delete the record on the database
         if (PlayerType.SPECTATOR.name().equals(leavingMember.getPlayerType())) {
             roomPlayerRepository.delete(leavingMember);
             return new LeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
@@ -205,6 +210,7 @@ public class RoomServiceImpl implements RoomService {
 
         game.setWinner(null);
 
+        // on here, if the player that will be leaving already placed a move, make the opponent become the winner and increment the score
         if (leavingPlayerPlacedAMove) {
             RoomPlayerEntity enemyPlayer = players.stream()
                     .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
@@ -220,11 +226,13 @@ public class RoomServiceImpl implements RoomService {
                 .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
                 .toList();
 
+        // set active to false for all players
         remainingPlayers.forEach(player -> {
             player.setActive(false);
             roomPlayerRepository.save(player);
         });
 
+        // remove all spectators when a player will be leaving
         players.stream()
                 .filter(player -> PlayerType.SPECTATOR.name().equals(player.getPlayerType()))
                 .forEach(roomPlayerRepository::delete);
@@ -277,6 +285,11 @@ public class RoomServiceImpl implements RoomService {
         List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
         requireActiveRoom(players);
 
+        if (!room.getStatus().equals(GameStatus.COMPLETED.name())) {
+            throw new GameNotCompleted(ErrorMessage.CURRENT_GAME_NOT_COMPLETED.format(room.getActiveGameId()));
+        }
+
+        // cannot play again if there are less player than expected (2 players)
         if (playerCount(players) < REQUIRED_PLAYER_COUNT) {
             throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
         }
@@ -451,6 +464,10 @@ public class RoomServiceImpl implements RoomService {
                 .count();
     }
 
+    /**
+     * Makes sure that the room is active by checking if all players isActive is true
+     *
+     */
     private void requireActiveRoom(List<RoomPlayerEntity> players) {
         boolean hasInactivePlayer = players.stream()
                 .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))

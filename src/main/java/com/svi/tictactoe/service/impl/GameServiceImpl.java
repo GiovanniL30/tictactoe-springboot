@@ -157,6 +157,7 @@ public class GameServiceImpl implements GameService {
             finishRound(room);
             roundCompleted = true;
         } else {
+            // switch current turn
             game.setCurrentTurn(currentTurn == Symbol.X ? Symbol.O.name() : Symbol.X.name());
         }
 
@@ -237,7 +238,7 @@ public class GameServiceImpl implements GameService {
         return players.stream()
                 .filter(player -> symbol.name().equals(player.getSymbol()))
                 .findFirst()
-                .orElseThrow(() -> new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage()));
+                .orElseThrow(() -> new PlayerNotFoundException(ErrorMessage.MOVING_PLAYER_SYMBOL_NOT_FOUND.format(symbol.name())));
     }
 
     private void requireActiveRoom(List<RoomPlayerEntity> players) {
