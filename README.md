@@ -491,3 +491,146 @@ Common errors:
 4. Finish normally, or call `POST /api/v1/rooms/{roomCode}/leave/{playerName}` to complete the round when a player leaves.
 5. Inspect the room or board with the corresponding `GET` route.
 6. After completion, start another round with `POST /api/v1/rooms/{roomCode}/play-again` and use the newly returned `gameId`.
+
+## WebSocket realtime API
+
+The application publishes realtime updates using STOMP over a native WebSocket connection.
+
+- Development endpoint: `ws://localhost:8080/ws`
+- Broker subscription prefix: `/topic`
+- Application destination prefix: `/app`
+- Allowed origins: all origins
+
+Clients only need to subscribe to topics. Gameplay commands are performed through the REST endpoints; the application currently has no client-to-server STOMP message handlers under `/app`.
+
+### Topics
+
+| Topic | Identifier | Published when | Payload |
+|---|---|---|---|
+| `/topic/rooms/{roomCode}/player-joined` | Room code | A player or spectator joins | `GameInfoResponse` |
+| `/topic/rooms/{roomCode}/game-completed` | Room code | A player wins, the board ends in a draw, or a player leaves | `GameInfoResponse` |
+| `/topic/rooms/{roomCode}/new-round-started` | Room code | `play-again` creates the next round | `PlayAgainResponse` |
+| `/topic/rooms/{roomCode}/game-deleted` | Room code | The room and its games are deleted | `RoomInfoResponse` |
+| `/topic/games/{gameId}/move-placed` | Active game UUID | A valid move is placed | `BoardResponse` |
+
+Subscribe to the room topics using the `roomCode` returned by create-room. Subscribe to the move topic using the current `gameId`. After a `new-round-started` event, unsubscribe from the old game topic and subscribe using the new `gameId` from the event payload.
+
+### Payload shapes
+
+`GameInfoResponse`, used by `player-joined` and `game-completed`:
+
+```json
+{
+  "players": [
+    {
+      "playerName": "Gio",
+      "score": 0,
+      "symbol": "X",
+      "type": "PLAYER"
+    }
+  ],
+  "roomCode": "H9LL",
+  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+  "round": 1,
+  "currentTurn": "X",
+  "spectatorCount": 0,
+  "status": "IN_PROGRESS",
+  "winner": null,
+  "message": "Player joined successfully."
+}
+```
+
+`BoardResponse`, used by `move-placed`:
+
+```json
+{
+  "message": "Move placed successfully.",
+  "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+  "grid": [
+    ["X", null, null],
+    [null, null, null],
+    [null, null, null]
+  ],
+  "currentTurn": "O",
+  "status": "IN_PROGRESS"
+}
+```
+
+`PlayAgainResponse`, used by `new-round-started`:
+
+```json
+{
+  "message": "New round started.",
+  "roomCode": "H9LL",
+  "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
+  "currentRound": 2,
+  "currentTurn": "X"
+}
+```
+
+`RoomInfoResponse`, used by `game-deleted`:
+
+```json
+{
+  "roomCode": "H9LL",
+  "games": [
+    {
+      "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+      "status": "COMPLETED",
+      "winner": "Gio"
+    }
+  ]
+}
+```
+
+### JavaScript STOMP example
+
+This example uses `@stomp/stompjs` and subscribes to both room-level events and moves for the active game:
+
+```javascript
+import { Client } from '@stomp/stompjs';
+
+const roomCode = 'H9LL';
+let gameId = '1f0c5258-219a-4f76-adc0-38b08300317b';
+let moveSubscription;
+
+const client = new Client({
+  brokerURL: 'ws://localhost:8080/ws',
+  reconnectDelay: 5000
+});
+
+const readMessage = frame => JSON.parse(frame.body);
+
+client.onConnect = () => {
+  client.subscribe(`/topic/rooms/${roomCode}/player-joined`, frame => {
+    console.log('Player joined:', readMessage(frame));
+  });
+
+  client.subscribe(`/topic/rooms/${roomCode}/game-completed`, frame => {
+    console.log('Game completed:', readMessage(frame));
+  });
+
+  client.subscribe(`/topic/rooms/${roomCode}/game-deleted`, frame => {
+    console.log('Game deleted:', readMessage(frame));
+  });
+
+  const subscribeToMoves = () => {
+    moveSubscription?.unsubscribe();
+    moveSubscription = client.subscribe(`/topic/games/${gameId}/move-placed`, frame => {
+      console.log('Move placed:', readMessage(frame));
+    });
+  };
+
+  subscribeToMoves();
+
+  client.subscribe(`/topic/rooms/${roomCode}/new-round-started`, frame => {
+    const nextRound = readMessage(frame);
+    gameId = nextRound.gameId;
+    subscribeToMoves();
+  });
+};
+
+client.activate();
+```
+
+Use `wss://` instead of `ws://` when the API is served over HTTPS.
