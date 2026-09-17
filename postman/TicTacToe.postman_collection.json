@@ -47,6 +47,7 @@
                   "    pm.expect(response.totalRooms).to.be.a('number');",
                   "    pm.expect(response.totalGames).to.be.a('number');",
                   "    pm.expect(response.rooms).to.be.an('array');",
+                  "    response.rooms.forEach(room => pm.expect(room.createdAt).to.be.a('string'));",
                   "});"
                 ]
               }
@@ -81,6 +82,8 @@
                   "});",
                   "",
                   "const response = pm.response.json();",
+                  "pm.expect(response.createdAt).to.be.a('string');",
+                  "pm.expect(response.player.joinedAt).to.be.a('string');",
                   "pm.collectionVariables.set('roomCode', response.roomCode);",
                   "pm.collectionVariables.set('gameId', response.gameId);"
                 ]
@@ -133,6 +136,7 @@
                   "    const response = pm.response.json();",
                   "    pm.expect(response.player.type).to.eql('PLAYER');",
                   "    pm.expect(response.player.symbol).to.eql('O');",
+                  "    pm.expect(response.player.joinedAt).to.be.a('string');",
                   "});",
                   "",
                   "const response = pm.response.json();",
@@ -183,6 +187,11 @@
                 "exec": [
                   "pm.test('Status is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains persisted timestamps', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.createdAt).to.be.a('string');",
+                  "    response.games.forEach(game => pm.expect(game.createdAt).to.be.a('string'));",
                   "});"
                 ]
               }
@@ -218,6 +227,7 @@
                   "});",
                   "",
                   "const response = pm.response.json();",
+                  "pm.expect(response.createdAt).to.be.a('string');",
                   "pm.collectionVariables.set('gameId', response.gameId);"
                 ]
               }
@@ -330,6 +340,11 @@
                 "exec": [
                   "pm.test('Status is 200 OK', function () {",
                   "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains game timestamps', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.createdAt).to.be.a('string');",
+                  "    response.players.forEach(player => pm.expect(player.joinedAt).to.be.a('string'));",
                   "});"
                 ]
               }
@@ -367,6 +382,8 @@
                   "    const response = pm.response.json();",
                   "    pm.expect(response.moves).to.be.an('array');",
                   "    pm.expect(response.result).to.be.an('object');",
+                  "    response.moves.forEach(move => pm.expect(move.playedAt).to.be.a('string'));",
+                  "    pm.expect(response.result).to.have.property('endedAt');",
                   "});"
                 ]
               }

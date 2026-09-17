@@ -114,6 +114,7 @@ public class RoomServiceImpl implements RoomService {
                 SuccessMessage.GAME_CREATED.getMessage(),
                 roomCode,
                 gameId,
+                room.getCreatedAt(),
                 PlayerMapper.toPlayerResponse(creator)
         );
     }
@@ -180,6 +181,7 @@ public class RoomServiceImpl implements RoomService {
         RoomEntity room = requireRoom(roomCode);
         List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
         String normalizedPlayerName = normalize(playerName);
+
         RoomPlayerEntity leavingMember = players.stream()
                 .filter(player -> normalizedPlayerName.equals(player.getNormalizedPlayerName()))
                 .findFirst()
@@ -222,6 +224,7 @@ public class RoomServiceImpl implements RoomService {
             player.setActive(false);
             roomPlayerRepository.save(player);
         });
+
         players.stream()
                 .filter(player -> PlayerType.SPECTATOR.name().equals(player.getPlayerType()))
                 .forEach(roomPlayerRepository::delete);
@@ -321,6 +324,7 @@ public class RoomServiceImpl implements RoomService {
 
         PlayAgainResponse response = RoomMapper.toPlayAgainResponse(
                 room,
+                nextGameRound,
                 SuccessMessage.NEW_ROUND_STARTED.getMessage()
         );
         publishRealtime(roomCode, MessageTopic.NEW_ROUND_STARTED, response);
@@ -357,23 +361,46 @@ public class RoomServiceImpl implements RoomService {
             List<RoomPlayerEntity> players,
             String message) {
         PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
-        return GameMapper.toGameInfoResponse(game, summary.players(), summary.spectatorCount(), message);
+        GameRoundEntity round = requireRound(game);
+        return GameMapper.toGameInfoResponse(
+                game,
+                summary.players(),
+                summary.spectatorCount(),
+                round.getCreatedAt(),
+                round.getEndedAt(),
+                message
+        );
     }
 
     private RoomInfoResponse toRoomInfoResponse(RoomEntity room) {
         List<GameSummaryResponse> games = gameRoundRepository
                 .findAllByRoomCode(room.getRoomCode()).stream()
                 .sorted(Comparator.comparing(GameRoundEntity::getRoundNo))
-                .map(GameRoundEntity::getGameId)
-                .map(this::requireGame)
-                .map(game -> new GameSummaryResponse(
-                        game.getGameId(),
-                        GameStatus.valueOf(game.getStatus()),
-                        game.getWinner()
-                ))
+                .map(round -> {
+                    GameEntity game = requireGame(round.getGameId());
+                    return new GameSummaryResponse(
+                            game.getGameId(),
+                            GameStatus.valueOf(game.getStatus()),
+                            game.getWinner(),
+                            round.getCreatedAt(),
+                            round.getEndedAt()
+                    );
+                })
                 .toList();
 
-        return new RoomInfoResponse(room.getRoomCode(), games);
+        return new RoomInfoResponse(
+                room.getRoomCode(),
+                room.getCreatedAt(),
+                games
+        );
+    }
+
+    private GameRoundEntity requireRound(GameEntity game) {
+        return gameRoundRepository
+                .findByRoomCodeAndRoundNo(game.getRoomCode(), game.getRoundNo())
+                .orElseThrow(() -> new GameNotFoundException(
+                        ErrorMessage.GAME_ID_NOT_FOUND.format(game.getGameId())
+                ));
     }
 
     private RoomEntity requireRoom(String roomCode) {

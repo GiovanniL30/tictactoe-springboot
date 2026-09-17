@@ -68,6 +68,7 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameMovesResponse getMoves(UUID gameId) {
         GameEntity game = requireGame(gameId);
+        GameRoundEntity round = requireRound(game);
         List<MoveResponse> moves = moveRepository.findAllByGameId(gameId).stream()
                 .sorted(Comparator.comparing(GameMoveEntity::getMoveNo))
                 .map(this::toMoveResponse)
@@ -78,7 +79,11 @@ public class GameServiceImpl implements GameService {
                 game.getRoomCode(),
                 game.getRoundNo(),
                 moves,
-                new GameResultResponse(GameStatus.valueOf(game.getStatus()), game.getWinner())
+                new GameResultResponse(
+                        GameStatus.valueOf(game.getStatus()),
+                        game.getWinner(),
+                        round.getEndedAt()
+                )
         );
     }
 
@@ -179,7 +184,15 @@ public class GameServiceImpl implements GameService {
 
     private GameInfoResponse toGameInfoResponse(GameEntity game, List<RoomPlayerEntity> players, String message) {
         PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
-        return GameMapper.toGameInfoResponse(game, summary.players(), summary.spectatorCount(), message);
+        GameRoundEntity round = requireRound(game);
+        return GameMapper.toGameInfoResponse(
+                game,
+                summary.players(),
+                summary.spectatorCount(),
+                round.getCreatedAt(),
+                round.getEndedAt(),
+                message
+        );
     }
 
     private RoomEntity requireRoom(String roomCode) {
@@ -190,6 +203,14 @@ public class GameServiceImpl implements GameService {
     private GameEntity requireGame(UUID gameId) {
         return gameRepository.findById(gameId)
                 .orElseThrow(() -> new GameNotFoundException(ErrorMessage.GAME_ID_NOT_FOUND.format(gameId)));
+    }
+
+    private GameRoundEntity requireRound(GameEntity game) {
+        return gameRoundRepository
+                .findByRoomCodeAndRoundNo(game.getRoomCode(), game.getRoundNo())
+                .orElseThrow(() -> new GameNotFoundException(
+                        ErrorMessage.GAME_ID_NOT_FOUND.format(game.getGameId())
+                ));
     }
 
     private GameEntity requireActiveGame(UUID gameId) {

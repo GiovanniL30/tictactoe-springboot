@@ -7,6 +7,7 @@ import com.svi.tictactoe.dto.response.game.GameInfoResponse;
 import com.svi.tictactoe.dto.response.player.PlayerResponse;
 import com.svi.tictactoe.entity.GameEntity;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +29,13 @@ public final class GameMapper {
         );
     }
 
-    public static GameInfoResponse toGameInfoResponse(GameEntity entity, List<PlayerResponse> players, int spectatorCount, String message) {
+    public static GameInfoResponse toGameInfoResponse(
+            GameEntity entity,
+            List<PlayerResponse> players,
+            int spectatorCount,
+            Instant createdAt,
+            Instant endedAt,
+            String message) {
         return new GameInfoResponse(
                 players,
                 entity.getRoomCode(),
@@ -38,6 +45,8 @@ public final class GameMapper {
                 spectatorCount,
                 toGameStatus(entity.getStatus()),
                 entity.getWinner(),
+                createdAt,
+                endedAt,
                 message
         );
     }

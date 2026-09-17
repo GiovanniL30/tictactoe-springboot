@@ -27,7 +27,8 @@ public final class PlayerMapper {
                 entity.getPlayerName(),
                 entity.getScore() == null ? 0 : entity.getScore(),
                 toSymbol(entity.getSymbol()),
-                PlayerType.valueOf(entity.getPlayerType())
+                PlayerType.valueOf(entity.getPlayerType()),
+                entity.getJoinedAt()
         );
     }
 

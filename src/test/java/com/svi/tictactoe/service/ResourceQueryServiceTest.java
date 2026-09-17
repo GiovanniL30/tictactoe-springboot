@@ -43,6 +43,7 @@ class ResourceQueryServiceTest {
     private static final String ROOM_CODE = "ROOM";
     private static final UUID FIRST_GAME_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID SECOND_GAME_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    private static final Instant CREATED_AT = Instant.parse("2026-09-15T00:00:00Z");
 
     private RoomService roomService;
     private GameService gameService;
@@ -62,9 +63,8 @@ class ResourceQueryServiceTest {
                 playerCatalogRepository,
                 playerGameRepository);
 
-        Instant createdAt = Instant.parse("2026-09-15T00:00:00Z");
         RoomEntity room = new RoomEntity(
-                ROOM_CODE, SECOND_GAME_ID, 2, GameStatus.IN_PROGRESS.name(), createdAt);
+                ROOM_CODE, SECOND_GAME_ID, 2, GameStatus.IN_PROGRESS.name(), CREATED_AT);
         GameEntity firstGame = new GameEntity(
                 FIRST_GAME_ID,
                 ROOM_CODE,
@@ -87,17 +87,20 @@ class ResourceQueryServiceTest {
         when(catalogRepository.findAllByCatalogKey(RoomCatalogEntity.ALL_ROOMS))
                 .thenReturn(List.of(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, ROOM_CODE)));
         when(roomRepository.findById(ROOM_CODE)).thenReturn(Optional.of(room));
-        when(gameRoundRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of(
-                new GameRoundEntity(
-                        ROOM_CODE, 2, SECOND_GAME_ID, GameStatus.IN_PROGRESS.name(), createdAt.plusSeconds(10), null),
-                new GameRoundEntity(
-                        ROOM_CODE, 1, FIRST_GAME_ID, GameStatus.COMPLETED.name(), createdAt, createdAt.plusSeconds(5))
-        ));
+        GameRoundEntity secondRound = new GameRoundEntity(
+                ROOM_CODE, 2, SECOND_GAME_ID, GameStatus.IN_PROGRESS.name(), CREATED_AT.plusSeconds(10), null);
+        GameRoundEntity firstRound = new GameRoundEntity(
+                ROOM_CODE, 1, FIRST_GAME_ID, GameStatus.COMPLETED.name(), CREATED_AT, CREATED_AT.plusSeconds(5));
+        when(gameRoundRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of(secondRound, firstRound));
+        when(gameRoundRepository.findByRoomCodeAndRoundNo(ROOM_CODE, 1))
+                .thenReturn(Optional.of(firstRound));
+        when(gameRoundRepository.findByRoomCodeAndRoundNo(ROOM_CODE, 2))
+                .thenReturn(Optional.of(secondRound));
         when(gameRepository.findById(FIRST_GAME_ID)).thenReturn(Optional.of(firstGame));
         when(gameRepository.findById(SECOND_GAME_ID)).thenReturn(Optional.of(secondGame));
         when(moveRepository.findAllByGameId(FIRST_GAME_ID)).thenReturn(List.of(
-                new GameMoveEntity(FIRST_GAME_ID, 2, ROOM_CODE, "Bob", "O", 1, 0, createdAt.plusSeconds(2)),
-                new GameMoveEntity(FIRST_GAME_ID, 1, ROOM_CODE, "Alice", "X", 0, 0, createdAt.plusSeconds(1))
+                new GameMoveEntity(FIRST_GAME_ID, 2, ROOM_CODE, "Bob", "O", 1, 0, CREATED_AT.plusSeconds(2)),
+                new GameMoveEntity(FIRST_GAME_ID, 1, ROOM_CODE, "Alice", "X", 0, 0, CREATED_AT.plusSeconds(1))
         ));
         when(roomPlayerRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of());
 
@@ -128,12 +131,17 @@ class ResourceQueryServiceTest {
         RoomInfoResponse room = roomService.getRoom(ROOM_CODE);
 
         assertEquals(ROOM_CODE, room.roomCode());
+        assertEquals(CREATED_AT, room.createdAt());
         assertEquals(2, room.games().size());
         assertEquals(FIRST_GAME_ID, room.games().getFirst().gameId());
         assertEquals(GameStatus.COMPLETED, room.games().getFirst().status());
         assertEquals("Alice", room.games().getFirst().winner());
+        assertEquals(CREATED_AT, room.games().getFirst().createdAt());
+        assertEquals(CREATED_AT.plusSeconds(5), room.games().getFirst().endedAt());
         assertEquals(SECOND_GAME_ID, room.games().getLast().gameId());
         assertEquals(GameStatus.IN_PROGRESS, room.games().getLast().status());
+        assertEquals(CREATED_AT.plusSeconds(10), room.games().getLast().createdAt());
+        assertNull(room.games().getLast().endedAt());
         assertNull(room.games().getLast().winner());
     }
 
@@ -154,9 +162,14 @@ class ResourceQueryServiceTest {
         assertEquals(FIRST_GAME_ID, game.gameId());
         assertEquals(GameStatus.COMPLETED, game.status());
         assertEquals("Alice", game.winner());
+        assertEquals(CREATED_AT, game.createdAt());
+        assertEquals(CREATED_AT.plusSeconds(5), game.endedAt());
         assertEquals(1, moves.moves().getFirst().moveNumber());
+        assertEquals(CREATED_AT.plusSeconds(1), moves.moves().getFirst().playedAt());
         assertEquals(2, moves.moves().getLast().moveNumber());
+        assertEquals(CREATED_AT.plusSeconds(2), moves.moves().getLast().playedAt());
         assertEquals(GameStatus.COMPLETED, moves.result().status());
         assertEquals("Alice", moves.result().winner());
+        assertEquals(CREATED_AT.plusSeconds(5), moves.result().endedAt());
     }
 }

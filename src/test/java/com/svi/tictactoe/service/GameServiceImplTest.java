@@ -68,13 +68,19 @@ class GameServiceImplTest {
         JoinGameResponse spectator = roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
 
         assertNotNull(game.gameId());
+        assertNotNull(game.createdAt());
+        assertEquals(game.createdAt(), game.player().joinedAt());
         assertEquals(Symbol.X, game.player().symbol());
         assertEquals(game.gameId(), secondPlayer.gameId());
         assertEquals(game.gameId(), spectator.gameId());
         assertEquals(Symbol.O, secondPlayer.player().symbol());
+        assertNotNull(secondPlayer.player().joinedAt());
         assertEquals(PlayerType.SPECTATOR, spectator.player().type());
         assertNull(spectator.player().symbol());
         assertEquals(1, gameService.getGame(game.gameId()).spectatorCount());
+        assertEquals(game.createdAt(), gameService.getGame(game.gameId()).createdAt());
+        assertEquals(game.createdAt(), roomService.getRoom(game.roomCode()).createdAt());
+        assertEquals(game.createdAt(), roomService.getRoom(game.roomCode()).games().getFirst().createdAt());
         assertEquals(game.gameId(), roomService.getRoom(game.roomCode()).games().getFirst().gameId());
         assertEquals(GameStatus.IN_PROGRESS, roomService.getRoom(game.roomCode()).games().getFirst().status());
         assertEquals(GameStatus.IN_PROGRESS, gameService.getBoard(game.gameId()).status());
@@ -106,6 +112,7 @@ class GameServiceImplTest {
         assertEquals(2, nextRound.currentRound());
         assertEquals(game.roomCode(), nextRound.roomCode());
         assertNotEquals(game.gameId(), nextRound.gameId());
+        assertNotNull(nextRound.createdAt());
         assertNull(gameService.getBoard(nextRound.gameId()).grid()[0][0]);
     }
 

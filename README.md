@@ -29,8 +29,16 @@ All routes are relative to `http://localhost:8080`. Requests and responses use J
 - Game statuses are `WAITING_FOR_PLAYERS`, `IN_PROGRESS`, and `COMPLETED`.
 - The room creator is player X. The second unique player is player O. Later players join as spectators.
 - Player-name comparison is case-insensitive and ignores leading and trailing spaces.
+- Timestamps are returned as ISO-8601 UTC values, for example `2026-09-16T01:30:00Z`.
 - A winning player's score increases by one. A completed draw has `winner: "DRAW"`; otherwise `winner` is the winning player's display name.
 - Empty board positions and unavailable values such as `currentTurn`, `winner`, and a spectator's `symbol` are returned as `null`.
+
+Timestamp use cases:
+
+- Room `createdAt` shows how long a lobby has existed.
+- Player `joinedAt` records arrival order and waiting time.
+- Game `createdAt` and `endedAt` allow clients to calculate round duration; `endedAt` is `null` while a round is active.
+- Move `playedAt` provides move ordering, pacing, and an audit trail.
 
 ## Room routes
 
@@ -57,11 +65,13 @@ Success: `201 Created`
   "message": "Game created successfully.",
   "roomCode": "H9LL",
   "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
+  "createdAt": "2026-09-16T01:29:00Z",
   "player": {
     "playerName": "Gio",
     "score": 0,
     "symbol": "X",
-    "type": "PLAYER"
+    "type": "PLAYER",
+    "joinedAt": "2026-09-16T01:29:00Z"
   }
 }
 ```
@@ -94,7 +104,8 @@ Success for player O: `200 OK`
     "playerName": "Vanni",
     "score": 0,
     "symbol": "O",
-    "type": "PLAYER"
+    "type": "PLAYER",
+    "joinedAt": "2026-09-16T01:29:30Z"
   }
 }
 ```
@@ -109,7 +120,8 @@ Success for a spectator: `200 OK`
     "playerName": "Observer",
     "score": 0,
     "symbol": null,
-    "type": "SPECTATOR"
+    "type": "SPECTATOR",
+    "joinedAt": "2026-09-16T01:29:45Z"
   }
 }
 ```
@@ -161,15 +173,19 @@ Success: `200 OK`
   "rooms": [
     {
       "roomCode": "H9LL",
+      "createdAt": "2026-09-16T01:29:00Z",
       "games": [
         {
           "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
           "status": "COMPLETED",
-          "winner": "Gio"
+          "winner": "Gio",
+          "createdAt": "2026-09-16T01:29:00Z",
+          "endedAt": "2026-09-16T01:31:00Z"
         },
         {
           "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
-          "status": "IN_PROGRESS"
+          "status": "IN_PROGRESS",
+          "createdAt": "2026-09-16T01:32:00Z"
         }
       ]
     }
@@ -181,7 +197,7 @@ Success: `200 OK`
 
 `GET /api/v1/rooms/{roomCode}`
 
-Returns only the room code and the ID, status, and winner of each game in the room.
+Returns the room creation time and the ID, status, winner, creation time, and completion time of each game in the room.
 
 Request body: none.
 
@@ -190,15 +206,19 @@ Success: `200 OK`
 ```json
 {
   "roomCode": "H9LL",
+  "createdAt": "2026-09-16T01:29:00Z",
   "games": [
     {
       "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
       "status": "COMPLETED",
-      "winner": "Gio"
+      "winner": "Gio",
+      "createdAt": "2026-09-16T01:29:00Z",
+      "endedAt": "2026-09-16T01:31:00Z"
     },
     {
       "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
-      "status": "IN_PROGRESS"
+      "status": "IN_PROGRESS",
+      "createdAt": "2026-09-16T01:32:00Z"
     }
   ]
 }
@@ -222,7 +242,8 @@ Success: `200 OK`
   "roomCode": "H9LL",
   "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
   "currentRound": 2,
-  "currentTurn": "X"
+  "currentTurn": "X",
+  "createdAt": "2026-09-16T01:32:00Z"
 }
 ```
 
@@ -241,15 +262,19 @@ Success: `200 OK`
 ```json
 {
   "roomCode": "H9LL",
+  "createdAt": "2026-09-16T01:29:00Z",
   "games": [
     {
       "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
       "status": "COMPLETED",
-      "winner": "Gio"
+      "winner": "Gio",
+      "createdAt": "2026-09-16T01:29:00Z",
+      "endedAt": "2026-09-16T01:31:00Z"
     },
     {
       "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
-      "status": "IN_PROGRESS"
+      "status": "IN_PROGRESS",
+      "createdAt": "2026-09-16T01:32:00Z"
     }
   ]
 }
@@ -261,7 +286,7 @@ Success: `200 OK`
 
 `GET /api/v1/games/{gameId}`
 
-Returns the selected game's players, scores, board state metadata, status, and winner.
+Returns the selected game's players, join times, board state metadata, status, winner, and round start/end times.
 
 Request body: none.
 
@@ -274,13 +299,15 @@ Success: `200 OK`
       "playerName": "Gio",
       "score": 1,
       "symbol": "X",
-      "type": "PLAYER"
+      "type": "PLAYER",
+      "joinedAt": "2026-09-16T01:29:00Z"
     },
     {
       "playerName": "Vanni",
       "score": 0,
       "symbol": "O",
-      "type": "PLAYER"
+      "type": "PLAYER",
+      "joinedAt": "2026-09-16T01:29:30Z"
     }
   ],
   "roomCode": "H9LL",
@@ -290,6 +317,8 @@ Success: `200 OK`
   "spectatorCount": 1,
   "status": "COMPLETED",
   "winner": "Gio",
+  "createdAt": "2026-09-16T01:29:00Z",
+  "endedAt": "2026-09-16T01:31:00Z",
   "message": "Game information retrieved successfully."
 }
 ```
@@ -360,7 +389,7 @@ When the move wins the round, `status` becomes `COMPLETED` and `currentTurn` bec
 
 `GET /api/v1/games/{gameId}/moves`
 
-Returns all moves for one round in move-number order, followed by the round's current result.
+Returns all moves with their persisted play times in move-number order, followed by the round result and completion time.
 
 Request body: none.
 
@@ -391,7 +420,8 @@ Success: `200 OK`
   ],
   "result": {
     "status": "COMPLETED",
-    "winner": "Gio"
+    "winner": "Gio",
+    "endedAt": "2026-09-16T01:31:00Z"
   }
 }
 ```
@@ -538,7 +568,8 @@ Subscribe to the room topics using the `roomCode` returned by create-room. Subsc
       "playerName": "Gio",
       "score": 0,
       "symbol": "X",
-      "type": "PLAYER"
+      "type": "PLAYER",
+      "joinedAt": "2026-09-16T01:29:00Z"
     }
   ],
   "roomCode": "H9LL",
@@ -548,6 +579,8 @@ Subscribe to the room topics using the `roomCode` returned by create-room. Subsc
   "spectatorCount": 0,
   "status": "IN_PROGRESS",
   "winner": null,
+  "createdAt": "2026-09-16T01:29:00Z",
+  "endedAt": null,
   "message": "Player joined successfully."
 }
 ```
@@ -576,7 +609,8 @@ Subscribe to the room topics using the `roomCode` returned by create-room. Subsc
   "roomCode": "H9LL",
   "gameId": "7291b377-d29d-4d69-82b0-05d20a851b3d",
   "currentRound": 2,
-  "currentTurn": "X"
+  "currentTurn": "X",
+  "createdAt": "2026-09-16T01:32:00Z"
 }
 ```
 
@@ -585,11 +619,14 @@ Subscribe to the room topics using the `roomCode` returned by create-room. Subsc
 ```json
 {
   "roomCode": "H9LL",
+  "createdAt": "2026-09-16T01:29:00Z",
   "games": [
     {
       "gameId": "1f0c5258-219a-4f76-adc0-38b08300317b",
       "status": "COMPLETED",
-      "winner": "Gio"
+      "winner": "Gio",
+      "createdAt": "2026-09-16T01:29:00Z",
+      "endedAt": "2026-09-16T01:31:00Z"
     }
   ]
 }
