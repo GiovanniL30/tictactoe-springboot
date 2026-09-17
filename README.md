@@ -72,6 +72,8 @@ Success: `201 Created`
 
 Adds the second player as player O and changes the game to `IN_PROGRESS`. If X and O already exist, the player joins as a spectator instead.
 
+Joining is rejected with `409 Conflict` if a player previously left and closed the room.
+
 Request body:
 
 ```json
@@ -116,13 +118,19 @@ Success for a spectator: `200 OK`
 
 `POST /api/v1/rooms/{roomCode}/leave/{playerName}`
 
-Finalizes the active round when the named player leaves. Player-name lookup is case-insensitive and ignores surrounding spaces.
+Removes the named member from the room. Player-name lookup is case-insensitive and ignores surrounding spaces.
+
+When a player leaves:
 
 - The room, game, and round statuses become `COMPLETED`.
 - `currentTurn` becomes `null`.
 - If the leaving player already placed a move, the opponent becomes the winner and receives one point.
 - If the leaving player has not placed a move, the game has no winner and neither player's score changes.
+- Both player rows are marked inactive, and all spectator rows are deleted.
+- Once closed this way, the room no longer accepts joins, moves, or requests to start another round.
 - The result is recorded in both players' game history and published through the game-completed realtime topic.
+
+When a spectator leaves, only that spectator's `room_players` row is deleted. The active game continues, both players remain active, and another spectator can still join.
 
 Request body: none.
 
@@ -134,7 +142,7 @@ Success: `200 OK`
 }
 ```
 
-An unknown player returns `404 Not Found`. Leaving a round that is already complete returns `409 Conflict`.
+An unknown member returns `404 Not Found`. A player cannot leave a round that is already complete and receives `409 Conflict`; a spectator can still leave and be deleted after the round completes.
 
 ### List rooms
 
@@ -201,6 +209,8 @@ Success: `200 OK`
 `POST /api/v1/rooms/{roomCode}/play-again`
 
 Completes the previous round if needed and starts the next round with an empty board. Both players must already be present. Scores and spectators remain attached to the room.
+
+If a player previously left, the room is inactive and this endpoint returns `409 Conflict` instead of creating another round.
 
 Request body: none.
 
@@ -313,6 +323,8 @@ Success: `200 OK`
 `POST /api/v1/games/{gameId}/move`
 
 Places the current player's symbol at a board coordinate. The route accepts only the room's active `gameId`.
+
+If a player previously left, the room is inactive and this endpoint returns `409 Conflict` without changing the board.
 
 Request body:
 
@@ -481,7 +493,7 @@ Common errors:
 |---|---|
 | `400 Bad Request` | Missing or malformed body, invalid symbol, or coordinates outside `0`–`2` |
 | `404 Not Found` | Room, game UUID, or player does not exist; a move uses a game UUID that is no longer the room's active round |
-| `409 Conflict` | Duplicate player name, game has not started, round is already complete, wrong symbol's turn, or board position is occupied |
+| `409 Conflict` | Duplicate player name, inactive room, game has not started, round is already complete, wrong symbol's turn, or board position is occupied |
 
 ## Typical gameplay sequence
 

@@ -206,6 +206,43 @@
           }
         },
         {
+          "name": "Play Again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('gameId', response.gameId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}/play-again",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms",
+                "{{roomCode}}",
+                "play-again"
+              ]
+            },
+            "description": "Starts the next round and replaces the gameId collection variable."
+          }
+        },
+        {
           "name": "Leave Room",
           "event": [
             {
@@ -241,44 +278,7 @@
                 "{{playerName}}"
               ]
             },
-            "description": "Completes the active round when playerName leaves. If that player already placed a move, the opponent wins and receives one point; otherwise the round completes without a winner. Set playerName to Gio or Vanni before sending."
-          }
-        },
-        {
-          "name": "Play Again",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const response = pm.response.json();",
-                  "pm.collectionVariables.set('gameId', response.gameId);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}/play-again",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "rooms",
-                "{{roomCode}}",
-                "play-again"
-              ]
-            },
-            "description": "Starts the next round and replaces the gameId collection variable."
+            "description": "If playerName is a player, completes the active round, marks both players inactive, deletes all spectators, and closes the lobby. If playerName is a spectator, deletes only that spectator and keeps the game active. A closed lobby rejects joining, placing moves, and starting another round with 409 Conflict. Set playerName to Gio, Vanni, or a spectator name before sending."
           }
         },
         {
