@@ -11,6 +11,7 @@ import com.svi.tictactoe.dto.response.game.BoardResponse;
 import com.svi.tictactoe.dto.response.game.CreateGameResponse;
 import com.svi.tictactoe.dto.response.game.GameInfoResponse;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
+import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
 import com.svi.tictactoe.engine.GameEngine;
 import com.svi.tictactoe.entity.GameEntity;
@@ -148,6 +149,59 @@ class GameServiceImplTest {
         gameService.placeMove(game.gameId(), new AddMoveRequest(0, 2, Symbol.X));
 
         assertEquals(Boolean.TRUE, harness.playerGames.get("alice").get(game.gameId()).getWon());
+        assertEquals(Boolean.FALSE, harness.playerGames.get("bob").get(game.gameId()).getWon());
+    }
+
+    @Test
+    void awardsTheOpponentWhenAPlayerLeavesAfterMakingAMove() {
+        RepositoryHarness harness = new RepositoryHarness();
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
+
+        LeaveGameResponse response = roomService.leaveRoom(game.roomCode(), " ALICE ");
+        GameInfoResponse completedGame = gameService.getGame(game.gameId());
+
+        assertEquals("Player left the room.", response.message());
+        assertEquals(GameStatus.COMPLETED, completedGame.status());
+        assertEquals("Bob", completedGame.winner());
+        assertNull(completedGame.currentTurn());
+        assertEquals(
+                1,
+                completedGame.players().stream()
+                        .filter(player -> "Bob".equals(player.playerName()))
+                        .findFirst()
+                        .orElseThrow()
+                        .score()
+        );
+        assertEquals(Boolean.TRUE, harness.playerGames.get("bob").get(game.gameId()).getWon());
+        assertEquals(Boolean.FALSE, harness.playerGames.get("alice").get(game.gameId()).getWon());
+        assertEquals(
+                MessageTopic.GAME_COMPLETED,
+                ((RealtimeEvent<?>) harness.publishedEvents.getLast()).topic()
+        );
+    }
+
+    @Test
+    void completesWithoutAWinnerWhenTheLeavingPlayerHasNotMadeAMove() {
+        RepositoryHarness harness = new RepositoryHarness();
+        RoomService roomService = harness.roomService();
+        GameService gameService = harness.gameService();
+        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
+
+        roomService.leaveRoom(game.roomCode(), "Bob");
+        GameInfoResponse completedGame = gameService.getGame(game.gameId());
+
+        assertEquals(GameStatus.COMPLETED, completedGame.status());
+        assertNull(completedGame.winner());
+        assertNull(completedGame.currentTurn());
+        assertEquals(0, completedGame.players().getFirst().score());
+        assertEquals(0, completedGame.players().getLast().score());
+        assertEquals(Boolean.FALSE, harness.playerGames.get("alice").get(game.gameId()).getWon());
         assertEquals(Boolean.FALSE, harness.playerGames.get("bob").get(game.gameId()).getWon());
     }
 

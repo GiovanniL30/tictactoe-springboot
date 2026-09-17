@@ -1,43 +1,19 @@
 package com.svi.tictactoe.service.impl;
 
-import com.svi.tictactoe.constants.ErrorMessage;
-import com.svi.tictactoe.constants.GameStatus;
-import com.svi.tictactoe.constants.MessageTopic;
-import com.svi.tictactoe.constants.PlayerType;
-import com.svi.tictactoe.constants.SuccessMessage;
-import com.svi.tictactoe.constants.Symbol;
+import com.svi.tictactoe.constants.*;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
-import com.svi.tictactoe.dto.response.game.GameInfoResponse;
-import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
-import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
+import com.svi.tictactoe.dto.response.game.*;
 import com.svi.tictactoe.dto.response.room.GameSummaryResponse;
 import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
 import com.svi.tictactoe.dto.response.room.RoomsResponse;
-import com.svi.tictactoe.entity.GameEntity;
-import com.svi.tictactoe.entity.GameRoundEntity;
-import com.svi.tictactoe.entity.RoomPlayerEntity;
-import com.svi.tictactoe.entity.PlayerCatalogEntity;
-import com.svi.tictactoe.entity.PlayerGameEntity;
-import com.svi.tictactoe.entity.RoomCatalogEntity;
-import com.svi.tictactoe.entity.RoomEntity;
-import com.svi.tictactoe.exception.GameNotFoundException;
-import com.svi.tictactoe.exception.GameNotStartedException;
-import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
+import com.svi.tictactoe.entity.*;
+import com.svi.tictactoe.exception.*;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.RoomMapper;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
-import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
-import com.svi.tictactoe.repository.cassandra.GameRepository;
-import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
-import com.svi.tictactoe.repository.cassandra.RoomPlayerRepository;
-import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
-import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
-import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
-import com.svi.tictactoe.repository.cassandra.RoomRepository;
+import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.RoomService;
 import com.svi.tictactoe.service.support.PlayerGameSynchronizer;
 import com.svi.tictactoe.util.CodeGenerator;
@@ -199,7 +175,57 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public LeaveGameResponse leaveRoom(String roomCode, String playerName) {
-        return null;
+        RoomEntity room = requireRoom(roomCode);
+        GameEntity game = requireGame(room.getActiveGameId());
+
+        if (GameStatus.COMPLETED.name().equals(game.getStatus())) {
+            throw new GameAlreadyFinishedException(ErrorMessage.GAME_ALREADY_FINISHED.getMessage());
+        }
+
+        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
+        String normalizedPlayerName = normalize(playerName);
+        RoomPlayerEntity leavingPlayer = players.stream()
+                .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
+                .filter(player -> normalizedPlayerName.equals(player.getNormalizedPlayerName()))
+                .findFirst()
+                .orElseThrow(() -> new PlayerNotFoundException(ErrorMessage.PLAYER_NOT_FOUND.format(playerName)));
+
+        Symbol leavingPlayerSymbol = Symbol.fromString(leavingPlayer.getSymbol());
+        boolean leavingPlayerPlacedAMove = game.getBoard().stream()
+                .filter(cell -> cell != null && !cell.isBlank())
+                .map(Symbol::fromString)
+                .anyMatch(symbol -> symbol == leavingPlayerSymbol);
+
+        game.setWinner(null);
+
+        if (leavingPlayerPlacedAMove) {
+            RoomPlayerEntity enemyPlayer = players.stream()
+                    .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
+                    .filter(player -> !player.getNormalizedPlayerName().equals(leavingPlayer.getNormalizedPlayerName()))
+                    .findFirst()
+                    .orElseThrow(() -> new PlayerNotFoundException(ErrorMessage.OPPONENT_OF_PLAYER_NOT_FOUND.format(playerName)));
+
+            enemyPlayer.setScore((enemyPlayer.getScore() == null ? 0 : enemyPlayer.getScore()) + 1);
+            roomPlayerRepository.save(enemyPlayer);
+            game.setWinner(enemyPlayer.getPlayerName());
+        }
+
+        game.setStatus(GameStatus.COMPLETED.name());
+        game.setCurrentTurn(null);
+        room.setStatus(GameStatus.COMPLETED.name());
+
+        gameRepository.save(game);
+        roomRepository.save(room);
+        finishRound(room);
+        playerGameSynchronizer.sync(game, players);
+
+        publishRealtime(
+                roomCode,
+                MessageTopic.GAME_COMPLETED,
+                toGameInfoResponse(game, players, SuccessMessage.GAME_COMPLETED.getMessage())
+        );
+
+        return new LeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
     }
 
     @Override
