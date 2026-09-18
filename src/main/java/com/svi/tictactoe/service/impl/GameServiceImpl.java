@@ -1,16 +1,34 @@
 package com.svi.tictactoe.service.impl;
 
-import com.svi.tictactoe.constants.*;
+import com.svi.tictactoe.constants.ErrorMessage;
+import com.svi.tictactoe.constants.GameStatus;
+import com.svi.tictactoe.constants.MessageTopic;
+import com.svi.tictactoe.constants.SuccessMessage;
+import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
-import com.svi.tictactoe.dto.response.game.*;
+import com.svi.tictactoe.dto.response.game.BoardResponse;
+import com.svi.tictactoe.dto.response.game.GameInfoResponse;
+import com.svi.tictactoe.dto.response.game.GameMovesResponse;
 import com.svi.tictactoe.engine.GameEngine;
-import com.svi.tictactoe.entity.*;
-import com.svi.tictactoe.exception.*;
+import com.svi.tictactoe.entity.GameEntity;
+import com.svi.tictactoe.entity.GameMoveEntity;
+import com.svi.tictactoe.entity.GameRoundEntity;
+import com.svi.tictactoe.entity.RoomEntity;
+import com.svi.tictactoe.entity.RoomPlayerEntity;
+import com.svi.tictactoe.exception.GameAlreadyFinishedException;
+import com.svi.tictactoe.exception.GameNotStartedException;
+import com.svi.tictactoe.exception.InvalidPositionException;
+import com.svi.tictactoe.exception.InvalidTurnException;
+import com.svi.tictactoe.exception.PlayerNotFoundException;
+import com.svi.tictactoe.exception.PositionAlreadyTakenException;
 import com.svi.tictactoe.mapper.GameMapper;
-import com.svi.tictactoe.mapper.MoveMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
-import com.svi.tictactoe.repository.cassandra.*;
+import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
+import com.svi.tictactoe.repository.cassandra.GameRepository;
+import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
+import com.svi.tictactoe.repository.cassandra.RoomPlayerRepository;
+import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.service.support.GameLookup;
 import com.svi.tictactoe.service.support.PlayerGameSynchronizer;
@@ -19,7 +37,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,7 +50,7 @@ public class GameServiceImpl implements GameService {
     private final GameMoveRepository moveRepository;
     private final PlayerGameSynchronizer playerGameSynchronizer;
     private final GameEngine gameEngine;
-    private  final GameLookup gameLookup;
+    private final GameLookup gameLookup;
     private final ApplicationEventPublisher eventPublisher;
 
     public GameServiceImpl(
@@ -84,22 +101,8 @@ public class GameServiceImpl implements GameService {
     public GameMovesResponse getMoves(UUID gameId) {
         GameEntity game = gameLookup.requireGame(gameId);
         GameRoundEntity round = gameLookup.requireRound(game);
-        List<MoveResponse> moves = moveRepository.findAllByGameId(gameId).stream()
-                .sorted(Comparator.comparing(GameMoveEntity::getMoveNo))
-                .map(MoveMapper::toMoveResponse)
-                .toList();
-
-        return new GameMovesResponse(
-                game.getGameId(),
-                game.getRoomCode(),
-                game.getRoundNo(),
-                moves,
-                new GameResultResponse(
-                        GameStatus.valueOf(game.getStatus()),
-                        game.getWinner(),
-                        round.getEndedAt()
-                )
-        );
+        List<GameMoveEntity> moves = moveRepository.findAllByGameId(gameId);
+        return GameMapper.toGameMovesResponse(game, round, moves);
     }
 
     @Override

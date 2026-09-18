@@ -521,7 +521,7 @@ Common errors:
 
 | HTTP status | Situation |
 |---|---|
-| `400 Bad Request` | Missing or malformed body, invalid symbol, or coordinates outside `0`–`2` |
+| `400 Bad Request` | Missing or malformed body, invalid symbol or UUID path value, or coordinates outside `0`–`2` |
 | `404 Not Found` | Room, game UUID, or player does not exist; a move uses a game UUID that is no longer the room's active round |
 | `409 Conflict` | Duplicate player name, inactive room, game has not started, round is already complete, wrong symbol's turn, or board position is occupied |
 

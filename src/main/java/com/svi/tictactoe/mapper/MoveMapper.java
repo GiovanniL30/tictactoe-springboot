@@ -6,7 +6,7 @@ import com.svi.tictactoe.entity.GameMoveEntity;
 
 public final class MoveMapper {
 
-    private MoveMapper(){
+    private MoveMapper() {
     }
 
     public static MoveResponse toMoveResponse(GameMoveEntity move) {

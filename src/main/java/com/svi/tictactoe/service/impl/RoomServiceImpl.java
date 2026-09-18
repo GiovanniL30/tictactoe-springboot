@@ -122,12 +122,11 @@ public class RoomServiceImpl implements RoomService {
         roomPlayerRepository.save(creator);
         playerGameSynchronizer.sync(game, List.of(creator));
 
-        return new CreateGameResponse(
-                SuccessMessage.GAME_CREATED.getMessage(),
-                roomCode,
-                gameId,
-                room.getCreatedAt(),
-                PlayerMapper.toPlayerResponse(creator)
+        return RoomMapper.toCreateGameResponse(
+                room,
+                game,
+                creator,
+                SuccessMessage.GAME_CREATED.getMessage()
         );
     }
 
@@ -137,9 +136,7 @@ public class RoomServiceImpl implements RoomService {
         List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(roomCode);
 
         String normalizedName = PlayerNameUtil.normalize(requestBody.playerName());
-        if (players.stream().anyMatch(player -> player.getNormalizedPlayerName().equals(normalizedName))) {
-            throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(requestBody.playerName()));
-        }
+        validatePlayerNotExists(players, requestBody.playerName());
 
         //if there are already 2 players, make other spectator
         long playerCount = playerCount(players);
@@ -205,7 +202,7 @@ public class RoomServiceImpl implements RoomService {
         // if player is spectator, delete the record on the database
         if (PlayerType.SPECTATOR.name().equals(leavingMember.getPlayerType())) {
             roomPlayerRepository.delete(leavingMember);
-            return new LeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
+            return RoomMapper.toLeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
         }
 
         GameEntity game = gameLookup.requireGame(room.getActiveGameId());
@@ -255,7 +252,7 @@ public class RoomServiceImpl implements RoomService {
                 )
         );
 
-        return new LeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
+        return RoomMapper.toLeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
     }
 
     @Override
@@ -267,7 +264,7 @@ public class RoomServiceImpl implements RoomService {
                 .toList();
 
         if (roomCodes.isEmpty()) {
-            return new RoomsResponse(0, 0, List.of());
+            return RoomMapper.toRoomsResponse(List.of());
         }
 
         List<GameRoundEntity> rounds = gameRoundRepository.findAllByRoomCodeIn(roomCodes);
@@ -284,11 +281,7 @@ public class RoomServiceImpl implements RoomService {
                 ))
                 .toList();
 
-        int totalGames = rooms.stream()
-                .mapToInt(room -> room.games().size())
-                .sum();
-
-        return new RoomsResponse(rooms.size(), totalGames, rooms);
+        return RoomMapper.toRoomsResponse(rooms);
     }
 
     @Override
@@ -303,13 +296,7 @@ public class RoomServiceImpl implements RoomService {
         RoomEntity room = gameLookup.requireRoom(roomCode);
         List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(roomCode);
 
-        if (!room.getStatus().equals(GameStatus.COMPLETED.name())) {
-            throw new GameNotCompleted(ErrorMessage.CURRENT_GAME_NOT_COMPLETED.format(room.getActiveGameId()));
-        }
-
-        if (playerCount(players) < REQUIRED_PLAYER_COUNT) {
-            throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
-        }
+        validateRoomIsComplete(room, players);
 
         Instant now = Instant.now();
         GameEntity previousGame = gameLookup.requireGame(room.getActiveGameId());
@@ -446,6 +433,22 @@ public class RoomServiceImpl implements RoomService {
             roomCode = CodeGenerator.generate();
         } while (roomRepository.existsById(roomCode));
         return roomCode;
+    }
+
+    private void validatePlayerNotExists(List<RoomPlayerEntity> players, String playerName) {
+        if (players.stream().anyMatch(player -> player.getNormalizedPlayerName().equals(PlayerNameUtil.normalize(playerName)))) {
+            throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(playerName));
+        }
+    }
+
+    private void validateRoomIsComplete(RoomEntity room, List<RoomPlayerEntity> players) {
+        if (!room.getStatus().equals(GameStatus.COMPLETED.name())) {
+            throw new GameNotCompleted(ErrorMessage.CURRENT_GAME_NOT_COMPLETED.format(room.getActiveGameId()));
+        }
+
+        if (playerCount(players) < REQUIRED_PLAYER_COUNT) {
+            throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
+        }
     }
 
     private <T> void publishRealtime(String destinationId, MessageTopic topic, T payload) {
