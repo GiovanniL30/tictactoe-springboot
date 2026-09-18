@@ -6,8 +6,7 @@ import com.svi.tictactoe.dto.request.CreateRoomRequest;
 import com.svi.tictactoe.dto.response.room.CreateRoomResponse;
 import com.svi.tictactoe.dto.response.player.PlayerResponse;
 import com.svi.tictactoe.exception.GameNotFoundException;
-import com.svi.tictactoe.exception.handler.ApiExceptionHandler;
-import com.svi.tictactoe.exception.handler.GlobalExceptionHandler;
+import com.svi.tictactoe.exception.GlobalExceptionHandler;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.service.RoomService;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +47,7 @@ class ControllerContractTest {
                 new RoomController(roomService),
                 new GameController(gameService)
         )
-                .setControllerAdvice(new GlobalExceptionHandler(), new ApiExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setValidator(validator)
                 .build();
     }

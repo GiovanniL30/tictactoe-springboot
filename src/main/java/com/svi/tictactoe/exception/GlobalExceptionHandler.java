@@ -1,4 +1,4 @@
-package com.svi.tictactoe.exception.handler;
+package com.svi.tictactoe.exception;
 
 import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.Symbol;
@@ -18,6 +18,13 @@ import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
+        return ResponseEntity
+                .status(ex.getStatus())
+                .body(new ErrorResponse(ex.getStatus().value(), ex.getMessage()));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ValidationErrorResponse> handleValidation(
