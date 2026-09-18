@@ -3,8 +3,11 @@ package com.svi.tictactoe.mapper;
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.player.PlayerResponse;
+import com.svi.tictactoe.dto.response.player.*;
+import com.svi.tictactoe.entity.PlayerCatalogEntity;
+import com.svi.tictactoe.entity.PlayerGameEntity;
 import com.svi.tictactoe.entity.RoomPlayerEntity;
+import com.svi.tictactoe.util.BoardUtil;
 
 import java.util.Comparator;
 import java.util.List;
@@ -15,10 +18,7 @@ public final class PlayerMapper {
     private PlayerMapper() {
     }
 
-    public static JoinGameResponse toJoinGameResponse(
-            RoomPlayerEntity player,
-            UUID gameId,
-            String message) {
+    public static JoinGameResponse toJoinGameResponse(RoomPlayerEntity player, UUID gameId, String message) {
         return new JoinGameResponse(message, gameId, toPlayerResponse(player));
     }
 
@@ -26,9 +26,36 @@ public final class PlayerMapper {
         return new PlayerResponse(
                 entity.getPlayerName(),
                 entity.getScore() == null ? 0 : entity.getScore(),
-                toSymbol(entity.getSymbol()),
+                BoardUtil.toSymbol(entity.getSymbol()),
                 PlayerType.valueOf(entity.getPlayerType()),
                 entity.getJoinedAt()
+        );
+    }
+
+    public static PlayersResponse toPlayersResponse(List<PlayerCatalogEntity> playerCatalogEntities) {
+        List<PlayerSummaryResponse> playerSummaryResponses = playerCatalogEntities.stream()
+                .sorted(Comparator.comparing(PlayerCatalogEntity::getNormalizedPlayerName))
+                .map(player -> new PlayerSummaryResponse(player.getPlayerName()))
+                .toList();
+
+        return new PlayersResponse(playerSummaryResponses.size(), playerSummaryResponses);
+    }
+
+    public static PlayerGamesResponse toPlayerGamesResponse(List<PlayerGameEntity> playerGameEntities, String playerName) {
+        List<PlayerGameSummaryResponse> playerGamesResponses = playerGameEntities.stream()
+                .sorted(Comparator.comparing(PlayerGameEntity::getRoomCode).thenComparing(PlayerGameEntity::getGameId))
+                .map(PlayerMapper::toPlayerGameSummary)
+                .toList();
+
+        return new PlayerGamesResponse(playerName, playerGamesResponses.size(), playerGamesResponses);
+    }
+
+    public static PlayerGameSummaryResponse toPlayerGameSummary(PlayerGameEntity game) {
+        return new PlayerGameSummaryResponse(
+                game.getRoomCode(),
+                game.getGameId(),
+                Symbol.fromString(game.getSymbol()),
+                Boolean.TRUE.equals(game.getWon())
         );
     }
 
@@ -44,10 +71,6 @@ public final class PlayerMapper {
                 .count();
 
         return new PlayerSummary(players, spectatorCount);
-    }
-
-    private static Symbol toSymbol(String value) {
-        return value == null || value.isBlank() ? null : Symbol.fromString(value);
     }
 
     public record PlayerSummary(

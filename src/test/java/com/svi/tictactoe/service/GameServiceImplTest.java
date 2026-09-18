@@ -32,6 +32,7 @@ import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
 import com.svi.tictactoe.service.impl.RoomServiceImpl;
+import com.svi.tictactoe.service.support.GameLookup;
 import com.svi.tictactoe.service.support.PlayerGameSynchronizer;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -107,6 +108,11 @@ class GameServiceImplTest {
         BoardResponse board = gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
         assertEquals(Symbol.X, board.grid()[0][0]);
         assertEquals(game.gameId(), board.gameId());
+
+        gameService.placeMove(game.gameId(), new AddMoveRequest(1, 0, Symbol.O));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.X));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(1, 1, Symbol.O));
+        gameService.placeMove(game.gameId(), new AddMoveRequest(0, 2, Symbol.X));
 
         PlayAgainResponse nextRound = roomService.playAgain(game.roomCode());
         assertEquals(2, nextRound.currentRound());
@@ -243,6 +249,7 @@ class GameServiceImplTest {
                 RoomInactiveException.class,
                 () -> roomService.joinRoom(game.roomCode(), joinRequest("Dave"))
         );
+
         assertThrows(
                 RoomInactiveException.class,
                 () -> gameService.placeMove(game.gameId(), new AddMoveRequest(0, 1, Symbol.O))
@@ -301,6 +308,7 @@ class GameServiceImplTest {
         private final PlayerGameRepository playerGameRepository = mock(PlayerGameRepository.class);
         private final GameEngine gameEngine = new GameEngine();
         private final List<Object> publishedEvents = new ArrayList<>();
+        private final GameLookup gameLookup = new GameLookup(roomRepository, gameRepository, gameRoundRepository, roomPlayerRepository);
         private final ApplicationEventPublisher eventPublisher = publishedEvents::add;
 
         private final Map<String, RoomEntity> rooms = new HashMap<>();
@@ -323,6 +331,17 @@ class GameServiceImplTest {
 
             when(gameRepository.findById(any(UUID.class)))
                     .thenAnswer(invocation -> Optional.ofNullable(games.get(invocation.getArgument(0))));
+            when(gameRepository.findAllById(any())).thenAnswer(invocation -> {
+                Iterable<UUID> gameIds = invocation.getArgument(0);
+                List<GameEntity> results = new ArrayList<>();
+                gameIds.forEach(gameId -> {
+                    GameEntity game = games.get(gameId);
+                    if (game != null) {
+                        results.add(game);
+                    }
+                });
+                return results;
+            });
             when(gameRepository.save(any(GameEntity.class))).thenAnswer(invocation -> {
                 GameEntity entity = invocation.getArgument(0);
                 games.put(entity.getGameId(), entity);
@@ -392,6 +411,7 @@ class GameServiceImplTest {
                     moveRepository,
                     playerGameSynchronizer(),
                     gameEngine,
+                    gameLookup,
                     eventPublisher
             );
         }
@@ -407,6 +427,7 @@ class GameServiceImplTest {
                     playerCatalogRepository,
                     playerGameRepository,
                     playerGameSynchronizer(),
+                    gameLookup,
                     eventPublisher
             );
         }
