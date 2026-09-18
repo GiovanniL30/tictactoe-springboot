@@ -24,6 +24,14 @@ import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+/**
+ * Centralized lookup helper for fetching game, room, and player entities.
+ * <p>
+ * Wraps repository calls with "require" semantics, throwing the appropriate
+ * exception when an entity is not found, inactive, or invalid.
+ * <p>
+ * This helps to keep services free of repetitive findById/orElseThrow boilerplate.
+ */
 @Component
 public class GameLookup {
 
