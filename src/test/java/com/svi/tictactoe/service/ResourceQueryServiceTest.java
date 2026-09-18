@@ -7,20 +7,8 @@ import com.svi.tictactoe.dto.response.game.GameMovesResponse;
 import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
 import com.svi.tictactoe.dto.response.room.RoomsResponse;
 import com.svi.tictactoe.engine.GameEngine;
-import com.svi.tictactoe.entity.GameEntity;
-import com.svi.tictactoe.entity.GameMoveEntity;
-import com.svi.tictactoe.entity.GameRoundEntity;
-import com.svi.tictactoe.entity.RoomCatalogEntity;
-import com.svi.tictactoe.entity.RoomEntity;
-import com.svi.tictactoe.mapper.GameMapper;
-import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
-import com.svi.tictactoe.repository.cassandra.GameRepository;
-import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
-import com.svi.tictactoe.repository.cassandra.RoomPlayerRepository;
-import com.svi.tictactoe.repository.cassandra.PlayerCatalogRepository;
-import com.svi.tictactoe.repository.cassandra.PlayerGameRepository;
-import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
-import com.svi.tictactoe.repository.cassandra.RoomRepository;
+import com.svi.tictactoe.entity.*;
+import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
 import com.svi.tictactoe.service.impl.RoomServiceImpl;
 import com.svi.tictactoe.service.support.GameLookup;
@@ -39,11 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class ResourceQueryServiceTest {
 
@@ -68,7 +52,8 @@ class ResourceQueryServiceTest {
         RoomPlayerRepository roomPlayerRepository = mock(RoomPlayerRepository.class);
         PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
         PlayerGameRepository playerGameRepository = mock(PlayerGameRepository.class);
-        ApplicationEventPublisher eventPublisher = event -> { };
+        ApplicationEventPublisher eventPublisher = event -> {
+        };
         PlayerGameSynchronizer playerGameSynchronizer = new PlayerGameSynchronizer(
                 playerCatalogRepository,
                 playerGameRepository);

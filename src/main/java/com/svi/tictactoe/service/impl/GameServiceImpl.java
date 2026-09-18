@@ -146,7 +146,7 @@ public class GameServiceImpl implements GameService {
             awardWin(game, room, movingPlayer);
             roundCompleted = true;
         } else if (isBoardFull(board)) {
-            completeRound(game, room, "DRAW");
+            completeRound(game, room, null);
             roundCompleted = true;
         } else {
             switchTurn(game, currentTurn);
