@@ -55,7 +55,7 @@ public class RoomController {
         return ResponseEntity.ok(roomService.playAgain(roomCode));
     }
 
-    @PostMapping("/{roomCode}/leave/{playerName}")
+    @PostMapping("/{roomCode}/players/{playerName}/leave")
     public ResponseEntity<LeaveRoomResponse> leaveRoom(@PathVariable String roomCode, @PathVariable String playerName) {
         return ResponseEntity.ok(roomService.leaveRoom(roomCode, playerName));
     }

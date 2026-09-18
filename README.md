@@ -9,7 +9,7 @@ All routes are relative to `http://localhost:8080`. Requests and responses use J
 | `GET` | `/api/v1/rooms` | List rooms and their game summaries |
 | `POST` | `/api/v1/rooms` | Create a room and its first game round |
 | `POST` | `/api/v1/rooms/{roomCode}/join` | Join a room as player O or as a spectator |
-| `POST` | `/api/v1/rooms/{roomCode}/leave/{playerName}` | Leave a room and end the active round |
+| `POST` | `/api/v1/rooms/{roomCode}/players/{playerName}/leave` | Leave a room and end the active round |
 | `GET` | `/api/v1/rooms/{roomCode}` | Get the games belonging to one room |
 | `POST` | `/api/v1/rooms/{roomCode}/play-again` | Start another round in the room |
 | `DELETE` | `/api/v1/rooms/{roomCode}` | Delete the room and its game data |
@@ -128,7 +128,7 @@ Success for a spectator: `200 OK`
 
 ### Leave a room
 
-`POST /api/v1/rooms/{roomCode}/leave/{playerName}`
+`POST /api/v1/rooms/{roomCode}/players/{playerName}/leave`
 
 Removes the named member from the room. Player-name lookup is case-insensitive and ignores surrounding spaces.
 
@@ -530,7 +530,7 @@ Common errors:
 1. Create a room with `POST /api/v1/rooms` and retain both `roomCode` and `gameId`.
 2. Join player O with `POST /api/v1/rooms/{roomCode}/join`.
 3. Alternate moves with `POST /api/v1/games/{gameId}/move`, beginning with X.
-4. Finish normally, or call `POST /api/v1/rooms/{roomCode}/leave/{playerName}` to complete the round when a player leaves.
+4. Finish normally, or call `POST /api/v1/rooms/{roomCode}/players/{playerName}/leave` to complete the round when a player leaves.
 5. Inspect the room or board with the corresponding `GET` route.
 6. After completion, start another round with `POST /api/v1/rooms/{roomCode}/play-again` and use the newly returned `gameId`.
 

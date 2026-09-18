@@ -275,7 +275,7 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}/leave/{{playerName}}",
+              "raw": "{{baseUrl}}/api/v1/rooms/{{roomCode}}/players/{{playerName}}/leave",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -284,8 +284,9 @@
                 "v1",
                 "rooms",
                 "{{roomCode}}",
-                "leave",
-                "{{playerName}}"
+                "players",
+                "{{playerName}}",
+                "leave"
               ]
             },
             "description": "If playerName is a player, completes the active round, marks both players inactive, deletes all spectators, and closes the lobby. If playerName is a spectator, deletes only that spectator and keeps the game active. A closed lobby rejects joining, placing moves, and starting another round with 409 Conflict. Set playerName to Gio, Vanni, or a spectator name before sending."
