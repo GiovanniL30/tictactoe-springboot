@@ -5,13 +5,13 @@ import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.MessageTopic;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
-import com.svi.tictactoe.dto.request.CreateGameRequest;
-import com.svi.tictactoe.dto.request.JoinGameRequest;
+import com.svi.tictactoe.dto.request.CreateRoomRequest;
+import com.svi.tictactoe.dto.request.JoinRoomRequest;
 import com.svi.tictactoe.dto.response.game.BoardResponse;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
+import com.svi.tictactoe.dto.response.room.CreateRoomResponse;
 import com.svi.tictactoe.dto.response.game.GameInfoResponse;
-import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
+import com.svi.tictactoe.dto.response.room.JoinRoomResponse;
+import com.svi.tictactoe.dto.response.room.LeaveRoomResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
 import com.svi.tictactoe.engine.GameEngine;
 import com.svi.tictactoe.entity.GameEntity;
@@ -64,9 +64,9 @@ class GameServiceImplTest {
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
 
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
-        JoinGameResponse secondPlayer = roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
-        JoinGameResponse spectator = roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
+        JoinRoomResponse secondPlayer = roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
+        JoinRoomResponse spectator = roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
 
         assertNotNull(game.gameId());
         assertNotNull(game.createdAt());
@@ -102,7 +102,7 @@ class GameServiceImplTest {
         RepositoryHarness harness = new RepositoryHarness();
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
         roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
 
         BoardResponse board = gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
@@ -127,7 +127,7 @@ class GameServiceImplTest {
         RepositoryHarness harness = new RepositoryHarness();
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
         roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
         roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
 
@@ -155,7 +155,7 @@ class GameServiceImplTest {
         RepositoryHarness harness = new RepositoryHarness();
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
         roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
 
         gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
@@ -173,11 +173,11 @@ class GameServiceImplTest {
         RepositoryHarness harness = new RepositoryHarness();
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
         roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
         gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
 
-        LeaveGameResponse response = roomService.leaveRoom(game.roomCode(), " ALICE ");
+        LeaveRoomResponse response = roomService.leaveRoom(game.roomCode(), " ALICE ");
         GameInfoResponse completedGame = gameService.getGame(game.gameId());
 
         assertEquals("Player left the room.", response.message());
@@ -205,7 +205,7 @@ class GameServiceImplTest {
         RepositoryHarness harness = new RepositoryHarness();
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
         roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
         gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
 
@@ -226,7 +226,7 @@ class GameServiceImplTest {
         RepositoryHarness harness = new RepositoryHarness();
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
         roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
         roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
         gameService.placeMove(game.gameId(), new AddMoveRequest(0, 0, Symbol.X));
@@ -265,11 +265,11 @@ class GameServiceImplTest {
         RepositoryHarness harness = new RepositoryHarness();
         RoomService roomService = harness.roomService();
         GameService gameService = harness.gameService();
-        CreateGameResponse game = roomService.createRoom(new CreateGameRequest("Alice"));
+        CreateRoomResponse game = roomService.createRoom(new CreateRoomRequest("Alice"));
         roomService.joinRoom(game.roomCode(), joinRequest("Bob"));
         roomService.joinRoom(game.roomCode(), joinRequest("Charlie"));
 
-        LeaveGameResponse response = roomService.leaveRoom(game.roomCode(), "Charlie");
+        LeaveRoomResponse response = roomService.leaveRoom(game.roomCode(), "Charlie");
 
         assertEquals("Player left the room.", response.message());
         assertEquals(2, harness.roomPlayers.get(game.roomCode()).size());
@@ -292,8 +292,8 @@ class GameServiceImplTest {
         );
     }
 
-    private JoinGameRequest joinRequest(String playerName) {
-        return new JoinGameRequest(playerName);
+    private JoinRoomRequest joinRequest(String playerName) {
+        return new JoinRoomRequest(playerName);
     }
 
     private static final class RepositoryHarness {

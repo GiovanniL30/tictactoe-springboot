@@ -1,21 +1,21 @@
 package com.svi.tictactoe.service;
 
-import com.svi.tictactoe.dto.request.CreateGameRequest;
-import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
-import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
+import com.svi.tictactoe.dto.request.CreateRoomRequest;
+import com.svi.tictactoe.dto.request.JoinRoomRequest;
+import com.svi.tictactoe.dto.response.room.CreateRoomResponse;
+import com.svi.tictactoe.dto.response.room.JoinRoomResponse;
+import com.svi.tictactoe.dto.response.room.LeaveRoomResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
 import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
 import com.svi.tictactoe.dto.response.room.RoomsResponse;
 
 public interface RoomService {
 
-    CreateGameResponse createRoom(CreateGameRequest requestBody);
+    CreateRoomResponse createRoom(CreateRoomRequest requestBody);
 
-    JoinGameResponse joinRoom(String roomCode, JoinGameRequest requestBody);
+    JoinRoomResponse joinRoom(String roomCode, JoinRoomRequest requestBody);
 
-    LeaveGameResponse leaveRoom(String roomCode, String playerName);
+    LeaveRoomResponse leaveRoom(String roomCode, String playerName);
 
     RoomsResponse getRooms();
 

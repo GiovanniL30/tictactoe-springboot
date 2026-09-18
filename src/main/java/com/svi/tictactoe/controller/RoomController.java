@@ -1,10 +1,10 @@
 package com.svi.tictactoe.controller;
 
-import com.svi.tictactoe.dto.request.CreateGameRequest;
-import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
-import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
+import com.svi.tictactoe.dto.request.CreateRoomRequest;
+import com.svi.tictactoe.dto.request.JoinRoomRequest;
+import com.svi.tictactoe.dto.response.room.CreateRoomResponse;
+import com.svi.tictactoe.dto.response.room.JoinRoomResponse;
+import com.svi.tictactoe.dto.response.room.LeaveRoomResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
 import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
 import com.svi.tictactoe.dto.response.room.RoomsResponse;
@@ -36,12 +36,12 @@ public class RoomController {
     }
 
     @PostMapping
-    public ResponseEntity<CreateGameResponse> createRoom(@Valid @RequestBody CreateGameRequest requestBody) {
+    public ResponseEntity<CreateRoomResponse> createRoom(@Valid @RequestBody CreateRoomRequest requestBody) {
         return ResponseEntity.status(HttpStatus.CREATED).body(roomService.createRoom(requestBody));
     }
 
     @PostMapping("/{roomCode}/join")
-    public ResponseEntity<JoinGameResponse> joinRoom(@PathVariable String roomCode, @Valid @RequestBody JoinGameRequest requestBody) {
+    public ResponseEntity<JoinRoomResponse> joinRoom(@PathVariable String roomCode, @Valid @RequestBody JoinRoomRequest requestBody) {
         return ResponseEntity.ok(roomService.joinRoom(roomCode, requestBody));
     }
 
@@ -56,7 +56,7 @@ public class RoomController {
     }
 
     @PostMapping("/{roomCode}/leave/{playerName}")
-    public ResponseEntity<LeaveGameResponse> leaveRoom(@PathVariable String roomCode, @PathVariable String playerName) {
+    public ResponseEntity<LeaveRoomResponse> leaveRoom(@PathVariable String roomCode, @PathVariable String playerName) {
         return ResponseEntity.ok(roomService.leaveRoom(roomCode, playerName));
     }
 

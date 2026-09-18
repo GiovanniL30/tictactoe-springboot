@@ -1,35 +1,19 @@
 package com.svi.tictactoe.service.impl;
 
-import com.svi.tictactoe.constants.ErrorMessage;
-import com.svi.tictactoe.constants.GameStatus;
-import com.svi.tictactoe.constants.MessageTopic;
-import com.svi.tictactoe.constants.SuccessMessage;
-import com.svi.tictactoe.constants.Symbol;
+import com.svi.tictactoe.constants.*;
 import com.svi.tictactoe.dto.request.AddMoveRequest;
+import com.svi.tictactoe.dto.response.RealtimeResponse;
 import com.svi.tictactoe.dto.response.game.BoardResponse;
 import com.svi.tictactoe.dto.response.game.GameInfoResponse;
 import com.svi.tictactoe.dto.response.game.GameMovesResponse;
+import com.svi.tictactoe.dto.response.player.PlayersSummaryResponse;
 import com.svi.tictactoe.engine.GameEngine;
-import com.svi.tictactoe.entity.GameEntity;
-import com.svi.tictactoe.entity.GameMoveEntity;
-import com.svi.tictactoe.entity.GameRoundEntity;
-import com.svi.tictactoe.entity.RoomEntity;
-import com.svi.tictactoe.entity.RoomPlayerEntity;
-import com.svi.tictactoe.exception.GameAlreadyFinishedException;
-import com.svi.tictactoe.exception.GameNotStartedException;
-import com.svi.tictactoe.exception.InvalidPositionException;
-import com.svi.tictactoe.exception.InvalidTurnException;
-import com.svi.tictactoe.exception.PlayerNotFoundException;
-import com.svi.tictactoe.exception.PositionAlreadyTakenException;
+import com.svi.tictactoe.entity.*;
+import com.svi.tictactoe.exception.*;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
-import com.svi.tictactoe.realtime.event.RealtimePayload;
-import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
-import com.svi.tictactoe.repository.cassandra.GameRepository;
-import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
-import com.svi.tictactoe.repository.cassandra.RoomPlayerRepository;
-import com.svi.tictactoe.repository.cassandra.RoomRepository;
+import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.GameService;
 import com.svi.tictactoe.service.support.GameLookup;
 import com.svi.tictactoe.service.support.PlayerGameSynchronizer;
@@ -80,7 +64,7 @@ public class GameServiceImpl implements GameService {
         GameEntity game = gameLookup.requireGame(gameId);
         GameRoundEntity round = gameLookup.requireRound(game);
         List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(game.getRoomCode());
-        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
+        PlayersSummaryResponse summary = PlayerMapper.summarize(players);
 
         return GameMapper.toGameInfoResponse(
                 game,
@@ -108,8 +92,13 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public BoardResponse placeMove(UUID gameId, AddMoveRequest requestBody) {
-        GameEntity game = gameLookup.requireActiveGame(gameId);
+        GameEntity game = gameLookup.requireGame(gameId);
         RoomEntity room = gameLookup.requireRoom(game.getRoomCode());
+
+        if (!room.getActiveGameId().equals(gameId)) {
+            throw new GameNotFoundException(ErrorMessage.GAME_ID_NOT_FOUND.format(gameId));
+        }
+
         List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(game.getRoomCode());
 
         validateGameInProgress(game);
@@ -127,7 +116,7 @@ public class GameServiceImpl implements GameService {
         int moveNumber = game.getMoveCount() == null ? 1 : game.getMoveCount() + 1;
         game.setMoveCount(moveNumber);
 
-        RoomPlayerEntity movingPlayer = findPlayerBySymbol(players, currentTurn);
+        RoomPlayerEntity movingPlayer = gameLookup.requirePlayerBySymbol(players, currentTurn);
 
         moveRepository.save(new GameMoveEntity(
                 gameId,
@@ -146,7 +135,7 @@ public class GameServiceImpl implements GameService {
             awardWin(game, room, movingPlayer);
             roundCompleted = true;
         } else if (isBoardFull(board)) {
-            completeRound(game, room, "DRAW");
+            completeRound(game, room, null);
             roundCompleted = true;
         } else {
             switchTurn(game, currentTurn);
@@ -164,7 +153,7 @@ public class GameServiceImpl implements GameService {
 
         if (roundCompleted) {
             GameRoundEntity round = gameLookup.requireRound(game);
-            PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
+            PlayersSummaryResponse summary = PlayerMapper.summarize(players);
             GameInfoResponse completedGame = GameMapper.toGameInfoResponse(
                     game,
                     summary.players(),
@@ -210,13 +199,6 @@ public class GameServiceImpl implements GameService {
                 });
     }
 
-    private RoomPlayerEntity findPlayerBySymbol(List<RoomPlayerEntity> players, Symbol symbol) {
-        return players.stream()
-                .filter(player -> symbol.name().equals(player.getSymbol()))
-                .findFirst()
-                .orElseThrow(() -> new PlayerNotFoundException(ErrorMessage.MOVING_PLAYER_SYMBOL_NOT_FOUND.format(symbol.name())));
-    }
-
     private void validateMove(Symbol requestedSymbol, Symbol currentTurn, int x, int y, List<String> board, int boardIndex) {
         validatePosition(x, y);
         validateTurn(requestedSymbol, currentTurn);
@@ -250,7 +232,7 @@ public class GameServiceImpl implements GameService {
         }
     }
 
-    private void publishRealtime(String destinationId, MessageTopic topic, RealtimePayload payload) {
+    private void publishRealtime(String destinationId, MessageTopic topic, RealtimeResponse payload) {
         eventPublisher.publishEvent(new RealtimeEvent(destinationId, topic, payload));
     }
 }

@@ -3,7 +3,7 @@ package com.svi.tictactoe.dto.response.game;
 import com.svi.tictactoe.constants.GameStatus;
 import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.dto.response.player.PlayerResponse;
-import com.svi.tictactoe.realtime.event.RealtimePayload;
+import com.svi.tictactoe.dto.response.RealtimeResponse;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,5 +20,5 @@ public record GameInfoResponse(
         String winner,
         Instant createdAt,
         Instant endedAt,
-        String message) implements RealtimePayload {
+        String message) implements RealtimeResponse {
 }
