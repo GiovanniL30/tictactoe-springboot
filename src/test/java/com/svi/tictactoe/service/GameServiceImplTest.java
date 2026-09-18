@@ -196,7 +196,7 @@ class GameServiceImplTest {
         assertEquals(Boolean.FALSE, harness.playerGames.get("alice").get(game.gameId()).getWon());
         assertEquals(
                 MessageTopic.GAME_COMPLETED,
-                ((RealtimeEvent<?>) harness.publishedEvents.getLast()).topic()
+                ((RealtimeEvent) harness.publishedEvents.getLast()).topic()
         );
     }
 

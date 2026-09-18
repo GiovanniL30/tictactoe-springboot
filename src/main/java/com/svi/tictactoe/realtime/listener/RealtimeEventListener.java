@@ -15,7 +15,7 @@ public class RealtimeEventListener {
     }
 
     @EventListener
-    public void onRealtimeEvent(RealtimeEvent<?> event) {
+    public void onRealtimeEvent(RealtimeEvent event) {
         messagingTemplate.convertAndSend(
                 event.topic().destination(event.destinationId()),
                 event.payload()

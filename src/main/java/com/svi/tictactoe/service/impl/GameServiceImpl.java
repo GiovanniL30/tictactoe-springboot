@@ -24,6 +24,7 @@ import com.svi.tictactoe.exception.PositionAlreadyTakenException;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
+import com.svi.tictactoe.realtime.event.RealtimePayload;
 import com.svi.tictactoe.repository.cassandra.GameMoveRepository;
 import com.svi.tictactoe.repository.cassandra.GameRepository;
 import com.svi.tictactoe.repository.cassandra.GameRoundRepository;
@@ -249,7 +250,7 @@ public class GameServiceImpl implements GameService {
         }
     }
 
-    private <T> void publishRealtime(String destinationId, MessageTopic topic, T payload) {
-        eventPublisher.publishEvent(new RealtimeEvent<>(destinationId, topic, payload));
+    private void publishRealtime(String destinationId, MessageTopic topic, RealtimePayload payload) {
+        eventPublisher.publishEvent(new RealtimeEvent(destinationId, topic, payload));
     }
 }

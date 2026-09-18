@@ -18,6 +18,7 @@ import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.RoomMapper;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
+import com.svi.tictactoe.realtime.event.RealtimePayload;
 import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.RoomService;
 import com.svi.tictactoe.service.support.GameLookup;
@@ -451,7 +452,7 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    private <T> void publishRealtime(String destinationId, MessageTopic topic, T payload) {
-        eventPublisher.publishEvent(new RealtimeEvent<>(destinationId, topic, payload));
+    private void publishRealtime(String destinationId, MessageTopic topic, RealtimePayload payload) {
+        eventPublisher.publishEvent(new RealtimeEvent(destinationId, topic, payload));
     }
 }
