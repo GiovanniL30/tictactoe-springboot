@@ -23,7 +23,9 @@ import com.svi.tictactoe.repository.cassandra.RoomCatalogRepository;
 import com.svi.tictactoe.repository.cassandra.RoomRepository;
 import com.svi.tictactoe.service.impl.GameServiceImpl;
 import com.svi.tictactoe.service.impl.RoomServiceImpl;
+import com.svi.tictactoe.service.support.GameLookup;
 import com.svi.tictactoe.service.support.PlayerGameSynchronizer;
+import com.svi.tictactoe.util.BoardUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -35,7 +37,12 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ResourceQueryServiceTest {
@@ -47,13 +54,16 @@ class ResourceQueryServiceTest {
 
     private RoomService roomService;
     private GameService gameService;
+    private GameRepository gameRepository;
+    private GameRoundRepository gameRoundRepository;
+    private RoomRepository roomRepository;
 
     @BeforeEach
     void setUp() {
         RoomCatalogRepository catalogRepository = mock(RoomCatalogRepository.class);
-        RoomRepository roomRepository = mock(RoomRepository.class);
-        GameRoundRepository gameRoundRepository = mock(GameRoundRepository.class);
-        GameRepository gameRepository = mock(GameRepository.class);
+        roomRepository = mock(RoomRepository.class);
+        gameRoundRepository = mock(GameRoundRepository.class);
+        gameRepository = mock(GameRepository.class);
         GameMoveRepository moveRepository = mock(GameMoveRepository.class);
         RoomPlayerRepository roomPlayerRepository = mock(RoomPlayerRepository.class);
         PlayerCatalogRepository playerCatalogRepository = mock(PlayerCatalogRepository.class);
@@ -62,6 +72,7 @@ class ResourceQueryServiceTest {
         PlayerGameSynchronizer playerGameSynchronizer = new PlayerGameSynchronizer(
                 playerCatalogRepository,
                 playerGameRepository);
+        GameLookup gameLookup = new GameLookup(roomRepository, gameRepository, gameRoundRepository, roomPlayerRepository);
 
         RoomEntity room = new RoomEntity(
                 ROOM_CODE, SECOND_GAME_ID, 2, GameStatus.IN_PROGRESS.name(), CREATED_AT);
@@ -82,22 +93,25 @@ class ResourceQueryServiceTest {
                 Symbol.X.name(),
                 null,
                 0,
-                GameMapper.emptyBoard());
+                BoardUtil.emptyBoard());
 
         when(catalogRepository.findAllByCatalogKey(RoomCatalogEntity.ALL_ROOMS))
                 .thenReturn(List.of(new RoomCatalogEntity(RoomCatalogEntity.ALL_ROOMS, ROOM_CODE)));
         when(roomRepository.findById(ROOM_CODE)).thenReturn(Optional.of(room));
+        when(roomRepository.findAllById(any())).thenReturn(List.of(room));
         GameRoundEntity secondRound = new GameRoundEntity(
                 ROOM_CODE, 2, SECOND_GAME_ID, GameStatus.IN_PROGRESS.name(), CREATED_AT.plusSeconds(10), null);
         GameRoundEntity firstRound = new GameRoundEntity(
                 ROOM_CODE, 1, FIRST_GAME_ID, GameStatus.COMPLETED.name(), CREATED_AT, CREATED_AT.plusSeconds(5));
         when(gameRoundRepository.findAllByRoomCode(ROOM_CODE)).thenReturn(List.of(secondRound, firstRound));
+        when(gameRoundRepository.findAllByRoomCodeIn(any())).thenReturn(List.of(secondRound, firstRound));
         when(gameRoundRepository.findByRoomCodeAndRoundNo(ROOM_CODE, 1))
                 .thenReturn(Optional.of(firstRound));
         when(gameRoundRepository.findByRoomCodeAndRoundNo(ROOM_CODE, 2))
                 .thenReturn(Optional.of(secondRound));
         when(gameRepository.findById(FIRST_GAME_ID)).thenReturn(Optional.of(firstGame));
         when(gameRepository.findById(SECOND_GAME_ID)).thenReturn(Optional.of(secondGame));
+        when(gameRepository.findAllById(any())).thenReturn(List.of(firstGame, secondGame));
         when(moveRepository.findAllByGameId(FIRST_GAME_ID)).thenReturn(List.of(
                 new GameMoveEntity(FIRST_GAME_ID, 2, ROOM_CODE, "Bob", "O", 1, 0, CREATED_AT.plusSeconds(2)),
                 new GameMoveEntity(FIRST_GAME_ID, 1, ROOM_CODE, "Alice", "X", 0, 0, CREATED_AT.plusSeconds(1))
@@ -114,6 +128,7 @@ class ResourceQueryServiceTest {
                 playerCatalogRepository,
                 playerGameRepository,
                 playerGameSynchronizer,
+                gameLookup,
                 eventPublisher);
         gameService = new GameServiceImpl(
                 roomRepository,
@@ -123,6 +138,7 @@ class ResourceQueryServiceTest {
                 moveRepository,
                 playerGameSynchronizer,
                 new GameEngine(),
+                gameLookup,
                 eventPublisher);
     }
 
@@ -143,6 +159,8 @@ class ResourceQueryServiceTest {
         assertEquals(CREATED_AT.plusSeconds(10), room.games().getLast().createdAt());
         assertNull(room.games().getLast().endedAt());
         assertNull(room.games().getLast().winner());
+        verify(gameRepository, times(1)).findAllById(any());
+        verify(gameRepository, never()).findById(any(UUID.class));
     }
 
     @Test
@@ -152,6 +170,12 @@ class ResourceQueryServiceTest {
         assertEquals(1, rooms.totalRooms());
         assertEquals(2, rooms.totalGames());
         assertEquals(ROOM_CODE, rooms.rooms().getFirst().roomCode());
+        verify(roomRepository, times(1)).findAllById(any());
+        verify(roomRepository, never()).findById(anyString());
+        verify(gameRoundRepository, times(1)).findAllByRoomCodeIn(any());
+        verify(gameRoundRepository, never()).findAllByRoomCode(anyString());
+        verify(gameRepository, times(1)).findAllById(any());
+        verify(gameRepository, never()).findById(any(UUID.class));
     }
 
     @Test

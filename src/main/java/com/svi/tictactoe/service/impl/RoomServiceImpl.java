@@ -3,30 +3,37 @@ package com.svi.tictactoe.service.impl;
 import com.svi.tictactoe.constants.*;
 import com.svi.tictactoe.dto.request.CreateGameRequest;
 import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.game.*;
-import com.svi.tictactoe.dto.response.room.GameSummaryResponse;
+import com.svi.tictactoe.dto.response.game.CreateGameResponse;
+import com.svi.tictactoe.dto.response.game.JoinGameResponse;
+import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
+import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
 import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
 import com.svi.tictactoe.dto.response.room.RoomsResponse;
 import com.svi.tictactoe.entity.*;
-import com.svi.tictactoe.exception.*;
+import com.svi.tictactoe.exception.GameAlreadyFinishedException;
+import com.svi.tictactoe.exception.GameNotCompleted;
+import com.svi.tictactoe.exception.GameNotStartedException;
+import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.RoomMapper;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
 import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.RoomService;
+import com.svi.tictactoe.service.support.GameLookup;
 import com.svi.tictactoe.service.support.PlayerGameSynchronizer;
+import com.svi.tictactoe.util.BoardUtil;
 import com.svi.tictactoe.util.CodeGenerator;
+import com.svi.tictactoe.util.PlayerNameUtil;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
-
-import static com.svi.tictactoe.util.PlayerNameUtil.normalize;
+import java.util.stream.Collectors;
 
 @Service
 public class RoomServiceImpl implements RoomService {
@@ -42,6 +49,7 @@ public class RoomServiceImpl implements RoomService {
     private final PlayerCatalogRepository playerCatalogRepository;
     private final PlayerGameRepository playerGameRepository;
     private final PlayerGameSynchronizer playerGameSynchronizer;
+    private final GameLookup gameLookup;
     private final ApplicationEventPublisher eventPublisher;
 
     public RoomServiceImpl(
@@ -54,6 +62,7 @@ public class RoomServiceImpl implements RoomService {
             PlayerCatalogRepository playerCatalogRepository,
             PlayerGameRepository playerGameRepository,
             PlayerGameSynchronizer playerGameSynchronizer,
+            GameLookup gameLookup,
             ApplicationEventPublisher eventPublisher) {
         this.roomRepository = roomRepository;
         this.roomCatalogRepository = roomCatalogRepository;
@@ -64,6 +73,7 @@ public class RoomServiceImpl implements RoomService {
         this.playerCatalogRepository = playerCatalogRepository;
         this.playerGameRepository = playerGameRepository;
         this.playerGameSynchronizer = playerGameSynchronizer;
+        this.gameLookup = gameLookup;
         this.eventPublisher = eventPublisher;
     }
 
@@ -82,7 +92,7 @@ public class RoomServiceImpl implements RoomService {
                 Symbol.X.name(),
                 null,
                 0,
-                GameMapper.emptyBoard()
+                BoardUtil.emptyBoard()
         );
 
         GameRoundEntity gameRound = new GameRoundEntity(
@@ -96,7 +106,7 @@ public class RoomServiceImpl implements RoomService {
 
         RoomPlayerEntity creator = new RoomPlayerEntity(
                 roomCode,
-                normalize(requestBody.playerName()),
+                PlayerNameUtil.normalize(requestBody.playerName()),
                 requestBody.playerName(),
                 PlayerType.PLAYER.name(),
                 Symbol.X.name(),
@@ -112,25 +122,21 @@ public class RoomServiceImpl implements RoomService {
         roomPlayerRepository.save(creator);
         playerGameSynchronizer.sync(game, List.of(creator));
 
-        return new CreateGameResponse(
-                SuccessMessage.GAME_CREATED.getMessage(),
-                roomCode,
-                gameId,
-                room.getCreatedAt(),
-                PlayerMapper.toPlayerResponse(creator)
+        return RoomMapper.toCreateGameResponse(
+                room,
+                game,
+                creator,
+                SuccessMessage.GAME_CREATED.getMessage()
         );
     }
 
     @Override
     public JoinGameResponse joinRoom(String roomCode, JoinGameRequest requestBody) {
-        RoomEntity room = requireRoom(roomCode);
-        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
-        requireActiveRoom(players);
+        RoomEntity room = gameLookup.requireRoom(roomCode);
+        List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(roomCode);
 
-        String normalizedName = normalize(requestBody.playerName());
-        if (players.stream().anyMatch(player -> player.getNormalizedPlayerName().equals(normalizedName))) {
-            throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(requestBody.playerName()));
-        }
+        String normalizedName = PlayerNameUtil.normalize(requestBody.playerName());
+        validatePlayerNotExists(players, requestBody.playerName());
 
         //if there are already 2 players, make other spectator
         long playerCount = playerCount(players);
@@ -151,10 +157,8 @@ public class RoomServiceImpl implements RoomService {
         roomPlayerRepository.save(player);
         players.add(player);
 
-        String message = type == PlayerType.PLAYER
-                ? SuccessMessage.PLAYER_JOINED.getMessage()
-                : SuccessMessage.SPECTATOR_JOINED.getMessage();
-        GameEntity game = requireGame(room.getActiveGameId());
+        String message = type == PlayerType.PLAYER ? SuccessMessage.PLAYER_JOINED.getMessage() : SuccessMessage.SPECTATOR_JOINED.getMessage();
+        GameEntity game = gameLookup.requireGame(room.getActiveGameId());
         JoinGameResponse response = PlayerMapper.toJoinGameResponse(
                 player,
                 game.getGameId(),
@@ -172,130 +176,130 @@ public class RoomServiceImpl implements RoomService {
             playerGameSynchronizer.sync(game, players);
         }
 
+        GameRoundEntity round = gameLookup.requireRound(game);
+        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
         publishRealtime(
                 roomCode,
                 MessageTopic.PLAYER_JOINED,
-                toGameInfoResponse(game, players, message)
+                GameMapper.toGameInfoResponse(
+                        game,
+                        summary.players(),
+                        summary.spectatorCount(),
+                        round.getCreatedAt(),
+                        round.getEndedAt(),
+                        message
+                )
         );
         return response;
     }
 
     @Override
     public LeaveGameResponse leaveRoom(String roomCode, String playerName) {
-        RoomEntity room = requireRoom(roomCode);
-        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
-        String normalizedPlayerName = normalize(playerName);
-
-        RoomPlayerEntity leavingMember = players.stream()
-                .filter(player -> normalizedPlayerName.equals(player.getNormalizedPlayerName()))
-                .findFirst()
-                .orElseThrow(() -> new PlayerNotFoundException(ErrorMessage.PLAYER_NOT_FOUND.format(playerName)));
+        RoomEntity room = gameLookup.requireRoom(roomCode);
+        List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(roomCode);
+        RoomPlayerEntity leavingMember = gameLookup.requireRoomPlayerEntity(players, playerName);
 
         // if player is spectator, delete the record on the database
         if (PlayerType.SPECTATOR.name().equals(leavingMember.getPlayerType())) {
             roomPlayerRepository.delete(leavingMember);
-            return new LeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
+            return RoomMapper.toLeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
         }
 
-        GameEntity game = requireGame(room.getActiveGameId());
+        GameEntity game = gameLookup.requireGame(room.getActiveGameId());
         if (GameStatus.COMPLETED.name().equals(game.getStatus())) {
             throw new GameAlreadyFinishedException(ErrorMessage.GAME_ALREADY_FINISHED.getMessage());
         }
 
         Symbol leavingPlayerSymbol = Symbol.fromString(leavingMember.getSymbol());
-        boolean leavingPlayerPlacedAMove = game.getBoard().stream()
-                .filter(cell -> cell != null && !cell.isBlank())
-                .map(Symbol::fromString)
-                .anyMatch(symbol -> symbol == leavingPlayerSymbol);
-
+        boolean leavingPlayerPlacedAMove = isPlayerPlacedMove(game, leavingPlayerSymbol);
         game.setWinner(null);
 
         // on here, if the player that will be leaving already placed a move, make the opponent become the winner and increment the score
         if (leavingPlayerPlacedAMove) {
-            RoomPlayerEntity enemyPlayer = players.stream()
-                    .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
-                    .filter(player -> !player.getNormalizedPlayerName().equals(leavingMember.getNormalizedPlayerName()))
-                    .findFirst()
-                    .orElseThrow(() -> new PlayerNotFoundException(ErrorMessage.OPPONENT_OF_PLAYER_NOT_FOUND.format(playerName)));
-
+            RoomPlayerEntity enemyPlayer = gameLookup.requireOpponent(players, leavingMember);
             enemyPlayer.setScore((enemyPlayer.getScore() == null ? 0 : enemyPlayer.getScore()) + 1);
             game.setWinner(enemyPlayer.getPlayerName());
         }
 
-        List<RoomPlayerEntity> remainingPlayers = players.stream()
+        List<RoomPlayerEntity> gamePlayers = players.stream()
                 .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
                 .toList();
 
-        // set active to false for all players
-        remainingPlayers.forEach(player -> {
-            player.setActive(false);
-            roomPlayerRepository.save(player);
-        });
-
-        // remove all spectators when a player will be leaving
-        players.stream()
-                .filter(player -> PlayerType.SPECTATOR.name().equals(player.getPlayerType()))
-                .forEach(roomPlayerRepository::delete);
-
+        setPlayersToInactive(gamePlayers);
+        deleteAllSpectator(players);
         game.setStatus(GameStatus.COMPLETED.name());
         game.setCurrentTurn(null);
         room.setStatus(GameStatus.COMPLETED.name());
 
         gameRepository.save(game);
         roomRepository.save(room);
+        playerGameSynchronizer.sync(game, gamePlayers);
         finishRound(room);
-        playerGameSynchronizer.sync(game, remainingPlayers);
+
+        GameRoundEntity round = gameLookup.requireRound(game);
+        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(gamePlayers);
 
         publishRealtime(
                 roomCode,
                 MessageTopic.GAME_COMPLETED,
-                toGameInfoResponse(game, remainingPlayers, SuccessMessage.GAME_COMPLETED.getMessage())
+                GameMapper.toGameInfoResponse(
+                        game,
+                        summary.players(),
+                        summary.spectatorCount(),
+                        round.getCreatedAt(),
+                        round.getEndedAt(),
+                        SuccessMessage.GAME_COMPLETED.getMessage()
+                )
         );
 
-        return new LeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
+        return RoomMapper.toLeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
     }
 
     @Override
     public RoomsResponse getRooms() {
-        List<RoomInfoResponse> rooms = roomCatalogRepository
+        List<String> roomCodes = roomCatalogRepository
                 .findAllByCatalogKey(RoomCatalogEntity.ALL_ROOMS).stream()
                 .sorted(Comparator.comparing(RoomCatalogEntity::getRoomCode))
                 .map(RoomCatalogEntity::getRoomCode)
-                .map(roomRepository::findById)
-                .flatMap(Optional::stream)
-                .map(this::toRoomInfoResponse)
                 .toList();
 
-        int totalGames = rooms.stream()
-                .mapToInt(room -> room.games().size())
-                .sum();
+        if (roomCodes.isEmpty()) {
+            return RoomMapper.toRoomsResponse(List.of());
+        }
 
-        return new RoomsResponse(rooms.size(), totalGames, rooms);
+        List<GameRoundEntity> rounds = gameRoundRepository.findAllByRoomCodeIn(roomCodes);
+
+        Map<String, List<GameRoundEntity>> roundsByRoomCode = rounds.stream().collect(Collectors.groupingBy(GameRoundEntity::getRoomCode));
+        Map<UUID, GameEntity> gamesById = gameLookup.requireGames(rounds);
+
+        List<RoomInfoResponse> rooms = roomRepository.findAllById(roomCodes).stream()
+                .sorted(Comparator.comparing(RoomEntity::getRoomCode))
+                .map(room -> RoomMapper.toRoomInfoResponse(
+                        room,
+                        roundsByRoomCode.getOrDefault(room.getRoomCode(), List.of()),
+                        gamesById
+                ))
+                .toList();
+
+        return RoomMapper.toRoomsResponse(rooms);
     }
 
     @Override
     public RoomInfoResponse getRoom(String roomCode) {
-        RoomEntity room = requireRoom(roomCode);
-        return toRoomInfoResponse(room);
+        RoomEntity room = gameLookup.requireRoom(roomCode);
+        List<GameRoundEntity> rounds = gameRoundRepository.findAllByRoomCode(roomCode);
+        return RoomMapper.toRoomInfoResponse(room, rounds, gameLookup.requireGames(rounds));
     }
 
     @Override
     public PlayAgainResponse playAgain(String roomCode) {
-        RoomEntity room = requireRoom(roomCode);
-        List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
-        requireActiveRoom(players);
+        RoomEntity room = gameLookup.requireRoom(roomCode);
+        List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(roomCode);
 
-        if (!room.getStatus().equals(GameStatus.COMPLETED.name())) {
-            throw new GameNotCompleted(ErrorMessage.CURRENT_GAME_NOT_COMPLETED.format(room.getActiveGameId()));
-        }
-
-        // cannot play again if there are less player than expected (2 players)
-        if (playerCount(players) < REQUIRED_PLAYER_COUNT) {
-            throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
-        }
+        validateRoomIsComplete(room, players);
 
         Instant now = Instant.now();
-        GameEntity previousGame = requireGame(room.getActiveGameId());
+        GameEntity previousGame = gameLookup.requireGame(room.getActiveGameId());
         finishRound(room);
         playerGameSynchronizer.sync(previousGame, players);
 
@@ -313,8 +317,9 @@ public class RoomServiceImpl implements RoomService {
                 Symbol.X.name(),
                 null,
                 0,
-                GameMapper.emptyBoard()
+                BoardUtil.emptyBoard()
         );
+
         GameRoundEntity nextGameRound = new GameRoundEntity(
                 roomCode,
                 nextRound,
@@ -334,17 +339,18 @@ public class RoomServiceImpl implements RoomService {
                 nextGameRound,
                 SuccessMessage.NEW_ROUND_STARTED.getMessage()
         );
+
         publishRealtime(roomCode, MessageTopic.NEW_ROUND_STARTED, response);
         return response;
     }
 
     @Override
     public RoomInfoResponse deleteRoom(String roomCode) {
-        RoomEntity room = requireRoom(roomCode);
+        RoomEntity room = gameLookup.requireRoom(roomCode);
         List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
-        RoomInfoResponse response = toRoomInfoResponse(room);
-
         List<GameRoundEntity> rounds = gameRoundRepository.findAllByRoomCode(roomCode);
+        RoomInfoResponse response = RoomMapper.toRoomInfoResponse(room, rounds, gameLookup.requireGames(rounds));
+
         for (GameRoundEntity round : rounds) {
             moveRepository.deleteAllByGameId(round.getGameId());
             gameRepository.deleteById(round.getGameId());
@@ -363,61 +369,24 @@ public class RoomServiceImpl implements RoomService {
         return response;
     }
 
-    private GameInfoResponse toGameInfoResponse(
-            GameEntity game,
-            List<RoomPlayerEntity> players,
-            String message) {
-        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
-        GameRoundEntity round = requireRound(game);
-        return GameMapper.toGameInfoResponse(
-                game,
-                summary.players(),
-                summary.spectatorCount(),
-                round.getCreatedAt(),
-                round.getEndedAt(),
-                message
-        );
+    private boolean isPlayerPlacedMove(GameEntity game, Symbol leavingPlayerSymbol) {
+        return game.getBoard().stream()
+                .filter(cell -> cell != null && !cell.isBlank())
+                .map(Symbol::fromString)
+                .anyMatch(symbol -> symbol == leavingPlayerSymbol);
     }
 
-    private RoomInfoResponse toRoomInfoResponse(RoomEntity room) {
-        List<GameSummaryResponse> games = gameRoundRepository
-                .findAllByRoomCode(room.getRoomCode()).stream()
-                .sorted(Comparator.comparing(GameRoundEntity::getRoundNo))
-                .map(round -> {
-                    GameEntity game = requireGame(round.getGameId());
-                    return new GameSummaryResponse(
-                            game.getGameId(),
-                            GameStatus.valueOf(game.getStatus()),
-                            game.getWinner(),
-                            round.getCreatedAt(),
-                            round.getEndedAt()
-                    );
-                })
-                .toList();
-
-        return new RoomInfoResponse(
-                room.getRoomCode(),
-                room.getCreatedAt(),
-                games
-        );
+    private void setPlayersToInactive(List<RoomPlayerEntity> players) {
+        players.forEach(player -> {
+            player.setActive(false);
+            roomPlayerRepository.save(player);
+        });
     }
 
-    private GameRoundEntity requireRound(GameEntity game) {
-        return gameRoundRepository
-                .findByRoomCodeAndRoundNo(game.getRoomCode(), game.getRoundNo())
-                .orElseThrow(() -> new GameNotFoundException(
-                        ErrorMessage.GAME_ID_NOT_FOUND.format(game.getGameId())
-                ));
-    }
-
-    private RoomEntity requireRoom(String roomCode) {
-        return roomRepository.findById(roomCode)
-                .orElseThrow(() -> new GameNotFoundException(ErrorMessage.GAME_NOT_FOUND.format(roomCode)));
-    }
-
-    private GameEntity requireGame(UUID gameId) {
-        return gameRepository.findById(gameId)
-                .orElseThrow(() -> new GameNotFoundException(ErrorMessage.GAME_ID_NOT_FOUND.format(gameId)));
+    private void deleteAllSpectator(List<RoomPlayerEntity> players) {
+        players.stream()
+                .filter(player -> PlayerType.SPECTATOR.name().equals(player.getPlayerType()))
+                .forEach(roomPlayerRepository::delete);
     }
 
     private void finishRound(RoomEntity room) {
@@ -458,29 +427,31 @@ public class RoomServiceImpl implements RoomService {
                 .count();
     }
 
-    /**
-     * Makes sure that the room is active by checking if all players isActive is true
-     *
-     */
-    private void requireActiveRoom(List<RoomPlayerEntity> players) {
-        boolean hasInactivePlayer = players.stream()
-                .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
-                .anyMatch(player -> !player.isActive());
-
-        if (hasInactivePlayer) {
-            throw new RoomInactiveException(ErrorMessage.ROOM_INACTIVE.getMessage());
-        }
-    }
-
-    private <T> void publishRealtime(String destinationId, MessageTopic topic, T payload) {
-        eventPublisher.publishEvent(new RealtimeEvent<>(destinationId, topic, payload));
-    }
-
     private String generateUniqueRoomCode() {
         String roomCode;
         do {
             roomCode = CodeGenerator.generate();
         } while (roomRepository.existsById(roomCode));
         return roomCode;
+    }
+
+    private void validatePlayerNotExists(List<RoomPlayerEntity> players, String playerName) {
+        if (players.stream().anyMatch(player -> player.getNormalizedPlayerName().equals(PlayerNameUtil.normalize(playerName)))) {
+            throw new PlayerAlreadyExistsException(ErrorMessage.PLAYER_ALREADY_EXISTS.format(playerName));
+        }
+    }
+
+    private void validateRoomIsComplete(RoomEntity room, List<RoomPlayerEntity> players) {
+        if (!room.getStatus().equals(GameStatus.COMPLETED.name())) {
+            throw new GameNotCompleted(ErrorMessage.CURRENT_GAME_NOT_COMPLETED.format(room.getActiveGameId()));
+        }
+
+        if (playerCount(players) < REQUIRED_PLAYER_COUNT) {
+            throw new GameNotStartedException(ErrorMessage.GAME_NOT_STARTED.getMessage());
+        }
+    }
+
+    private <T> void publishRealtime(String destinationId, MessageTopic topic, T payload) {
+        eventPublisher.publishEvent(new RealtimeEvent<>(destinationId, topic, payload));
     }
 }

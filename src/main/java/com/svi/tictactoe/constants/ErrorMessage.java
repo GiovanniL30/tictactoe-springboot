@@ -17,6 +17,7 @@ public enum ErrorMessage {
     INVALID_POSITION("Position (%d, %d) is invalid."),
     VALIDATION_FAILED("Validation failed."),
     INVALID_SYMBOL("symbol must be either X or O."),
+    INVALID_PATH_VARIABLE("Path variable '%s' has an invalid value."),
     INVALID_REQUEST_BODY("Request body is missing or invalid.");
 
     private final String message;

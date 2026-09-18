@@ -16,5 +16,7 @@ public interface GameRoundRepository extends CassandraRepository<GameRoundEntity
     @Query("SELECT * FROM game_rounds WHERE room_code = ?0 AND round_no = ?1")
     Optional<GameRoundEntity> findByRoomCodeAndRoundNo(String roomCode, Integer roundNo);
 
+    List<GameRoundEntity> findAllByRoomCodeIn(List<String> roomCodes);
+
     void deleteAllByRoomCode(String roomCode);
 }
