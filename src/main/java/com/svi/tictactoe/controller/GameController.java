@@ -42,7 +42,7 @@ public class GameController {
     }
 
     @PostMapping("/{gameId}/move")
-    public ResponseEntity<BoardResponse> addMove(@PathVariable UUID gameId, @Valid @RequestBody AddMoveRequest requestBody) {
+    public ResponseEntity<BoardResponse> placeMove(@PathVariable UUID gameId, @Valid @RequestBody AddMoveRequest requestBody) {
         return ResponseEntity.ok(gameService.placeMove(gameId, requestBody));
     }
 

@@ -1,12 +1,8 @@
 package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
-import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
-import com.svi.tictactoe.dto.response.room.GameSummaryResponse;
-import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
-import com.svi.tictactoe.dto.response.room.RoomsResponse;
+import com.svi.tictactoe.dto.response.room.*;
 import com.svi.tictactoe.entity.GameEntity;
 import com.svi.tictactoe.entity.GameRoundEntity;
 import com.svi.tictactoe.entity.RoomEntity;
@@ -22,8 +18,8 @@ public final class RoomMapper {
     private RoomMapper() {
     }
 
-    public static CreateGameResponse toCreateGameResponse(RoomEntity room, GameEntity game, RoomPlayerEntity creator, String message) {
-        return new CreateGameResponse(
+    public static CreateRoomResponse toCreateRoomResponse(RoomEntity room, GameEntity game, RoomPlayerEntity creator, String message) {
+        return new CreateRoomResponse(
                 message,
                 room.getRoomCode(),
                 game.getGameId(),
@@ -32,8 +28,8 @@ public final class RoomMapper {
         );
     }
 
-    public static LeaveGameResponse toLeaveGameResponse(String message) {
-        return new LeaveGameResponse(message);
+    public static LeaveRoomResponse toLeaveRoomResponse(String message) {
+        return new LeaveRoomResponse(message);
     }
 
     public static PlayAgainResponse toPlayAgainResponse(RoomEntity entity, GameRoundEntity round, String message) {

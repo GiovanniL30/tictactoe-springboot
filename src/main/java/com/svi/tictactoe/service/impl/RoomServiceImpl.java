@@ -1,24 +1,21 @@
 package com.svi.tictactoe.service.impl;
 
 import com.svi.tictactoe.constants.*;
-import com.svi.tictactoe.dto.request.CreateGameRequest;
-import com.svi.tictactoe.dto.request.JoinGameRequest;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
-import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.game.LeaveGameResponse;
+import com.svi.tictactoe.dto.request.CreateRoomRequest;
+import com.svi.tictactoe.dto.request.JoinRoomRequest;
+import com.svi.tictactoe.dto.response.RealtimeResponse;
 import com.svi.tictactoe.dto.response.game.PlayAgainResponse;
-import com.svi.tictactoe.dto.response.room.RoomInfoResponse;
-import com.svi.tictactoe.dto.response.room.RoomsResponse;
+import com.svi.tictactoe.dto.response.player.PlayersSummaryResponse;
+import com.svi.tictactoe.dto.response.room.*;
 import com.svi.tictactoe.entity.*;
 import com.svi.tictactoe.exception.GameAlreadyFinishedException;
-import com.svi.tictactoe.exception.GameNotCompleted;
+import com.svi.tictactoe.exception.GameNotCompletedException;
 import com.svi.tictactoe.exception.GameNotStartedException;
 import com.svi.tictactoe.exception.PlayerAlreadyExistsException;
 import com.svi.tictactoe.mapper.GameMapper;
 import com.svi.tictactoe.mapper.PlayerMapper;
 import com.svi.tictactoe.mapper.RoomMapper;
 import com.svi.tictactoe.realtime.event.RealtimeEvent;
-import com.svi.tictactoe.realtime.event.RealtimePayload;
 import com.svi.tictactoe.repository.cassandra.*;
 import com.svi.tictactoe.service.RoomService;
 import com.svi.tictactoe.service.support.GameLookup;
@@ -79,7 +76,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public CreateGameResponse createRoom(CreateGameRequest requestBody) {
+    public CreateRoomResponse createRoom(CreateRoomRequest requestBody) {
         String roomCode = generateUniqueRoomCode();
         UUID gameId = UUID.randomUUID();
         Instant now = Instant.now();
@@ -123,7 +120,7 @@ public class RoomServiceImpl implements RoomService {
         roomPlayerRepository.save(creator);
         playerGameSynchronizer.sync(game, List.of(creator));
 
-        return RoomMapper.toCreateGameResponse(
+        return RoomMapper.toCreateRoomResponse(
                 room,
                 game,
                 creator,
@@ -132,7 +129,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public JoinGameResponse joinRoom(String roomCode, JoinGameRequest requestBody) {
+    public JoinRoomResponse joinRoom(String roomCode, JoinRoomRequest requestBody) {
         RoomEntity room = gameLookup.requireRoom(roomCode);
         List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(roomCode);
 
@@ -160,7 +157,7 @@ public class RoomServiceImpl implements RoomService {
 
         String message = type == PlayerType.PLAYER ? SuccessMessage.PLAYER_JOINED.getMessage() : SuccessMessage.SPECTATOR_JOINED.getMessage();
         GameEntity game = gameLookup.requireGame(room.getActiveGameId());
-        JoinGameResponse response = PlayerMapper.toJoinGameResponse(
+        JoinRoomResponse response = PlayerMapper.toJoinGameResponse(
                 player,
                 game.getGameId(),
                 message
@@ -178,7 +175,7 @@ public class RoomServiceImpl implements RoomService {
         }
 
         GameRoundEntity round = gameLookup.requireRound(game);
-        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(players);
+        PlayersSummaryResponse summary = PlayerMapper.summarize(players);
         publishRealtime(
                 roomCode,
                 MessageTopic.PLAYER_JOINED,
@@ -195,7 +192,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public LeaveGameResponse leaveRoom(String roomCode, String playerName) {
+    public LeaveRoomResponse leaveRoom(String roomCode, String playerName) {
         RoomEntity room = gameLookup.requireRoom(roomCode);
         List<RoomPlayerEntity> players = gameLookup.requireActiveRoomPlayers(roomCode);
         RoomPlayerEntity leavingMember = gameLookup.requireRoomPlayerEntity(players, playerName);
@@ -203,7 +200,7 @@ public class RoomServiceImpl implements RoomService {
         // if player is spectator, delete the record on the database
         if (PlayerType.SPECTATOR.name().equals(leavingMember.getPlayerType())) {
             roomPlayerRepository.delete(leavingMember);
-            return RoomMapper.toLeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
+            return RoomMapper.toLeaveRoomResponse(SuccessMessage.PLAYER_LEFT.getMessage());
         }
 
         GameEntity game = gameLookup.requireGame(room.getActiveGameId());
@@ -238,7 +235,7 @@ public class RoomServiceImpl implements RoomService {
         finishRound(room);
 
         GameRoundEntity round = gameLookup.requireRound(game);
-        PlayerMapper.PlayerSummary summary = PlayerMapper.summarize(gamePlayers);
+        PlayersSummaryResponse summary = PlayerMapper.summarize(gamePlayers);
 
         publishRealtime(
                 roomCode,
@@ -253,7 +250,7 @@ public class RoomServiceImpl implements RoomService {
                 )
         );
 
-        return RoomMapper.toLeaveGameResponse(SuccessMessage.PLAYER_LEFT.getMessage());
+        return RoomMapper.toLeaveRoomResponse(SuccessMessage.PLAYER_LEFT.getMessage());
     }
 
     @Override
@@ -444,7 +441,7 @@ public class RoomServiceImpl implements RoomService {
 
     private void validateRoomIsComplete(RoomEntity room, List<RoomPlayerEntity> players) {
         if (!room.getStatus().equals(GameStatus.COMPLETED.name())) {
-            throw new GameNotCompleted(ErrorMessage.CURRENT_GAME_NOT_COMPLETED.format(room.getActiveGameId()));
+            throw new GameNotCompletedException(ErrorMessage.CURRENT_GAME_NOT_COMPLETED.format(room.getActiveGameId()));
         }
 
         if (playerCount(players) < REQUIRED_PLAYER_COUNT) {
@@ -452,7 +449,7 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
-    private void publishRealtime(String destinationId, MessageTopic topic, RealtimePayload payload) {
+    private void publishRealtime(String destinationId, MessageTopic topic, RealtimeResponse payload) {
         eventPublisher.publishEvent(new RealtimeEvent(destinationId, topic, payload));
     }
 }

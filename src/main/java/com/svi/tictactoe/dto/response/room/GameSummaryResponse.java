@@ -9,8 +9,6 @@ import java.util.UUID;
 public record GameSummaryResponse(
         UUID gameId,
         GameStatus status,
-
-        @JsonInclude(JsonInclude.Include.NON_NULL)
         String winner,
 
         Instant createdAt,

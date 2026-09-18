@@ -2,8 +2,8 @@ package com.svi.tictactoe.controller;
 
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.request.CreateGameRequest;
-import com.svi.tictactoe.dto.response.game.CreateGameResponse;
+import com.svi.tictactoe.dto.request.CreateRoomRequest;
+import com.svi.tictactoe.dto.response.room.CreateRoomResponse;
 import com.svi.tictactoe.dto.response.player.PlayerResponse;
 import com.svi.tictactoe.exception.GameNotFoundException;
 import com.svi.tictactoe.exception.handler.ApiExceptionHandler;
@@ -57,14 +57,14 @@ class ControllerContractTest {
     void createsRoomWithCreatedStatusAndResponseJson() throws Exception {
         UUID gameId = UUID.fromString("00000000-0000-0000-0000-000000000001");
         Instant createdAt = Instant.parse("2026-09-18T00:00:00Z");
-        CreateGameResponse response = new CreateGameResponse(
+        CreateRoomResponse response = new CreateRoomResponse(
                 "Game created successfully.",
                 "ROOM",
                 gameId,
                 createdAt,
                 new PlayerResponse("Alice", 0, Symbol.X, PlayerType.PLAYER, createdAt)
         );
-        when(roomService.createRoom(any(CreateGameRequest.class))).thenReturn(response);
+        when(roomService.createRoom(any(CreateRoomRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/rooms")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,7 +85,7 @@ class ControllerContractTest {
                 .andExpect(jsonPath("$.message").value("Validation failed."))
                 .andExpect(jsonPath("$.errors[0]").value("playerName is required."));
 
-        verify(roomService, never()).createRoom(any(CreateGameRequest.class));
+        verify(roomService, never()).createRoom(any(CreateRoomRequest.class));
     }
 
     @Test

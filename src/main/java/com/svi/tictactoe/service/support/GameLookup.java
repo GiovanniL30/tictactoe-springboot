@@ -2,6 +2,7 @@ package com.svi.tictactoe.service.support;
 
 import com.svi.tictactoe.constants.ErrorMessage;
 import com.svi.tictactoe.constants.PlayerType;
+import com.svi.tictactoe.constants.Symbol;
 import com.svi.tictactoe.entity.GameEntity;
 import com.svi.tictactoe.entity.GameRoundEntity;
 import com.svi.tictactoe.entity.RoomEntity;
@@ -87,17 +88,6 @@ public class GameLookup {
                 .orElseThrow(() -> new GameNotFoundException(ErrorMessage.GAME_ID_NOT_FOUND.format(game.getGameId())));
     }
 
-    public GameEntity requireActiveGame(UUID gameId) {
-        GameEntity game = requireGame(gameId);
-        RoomEntity room = requireRoom(game.getRoomCode());
-
-        if (!room.getActiveGameId().equals(gameId)) {
-            throw new GameNotFoundException(ErrorMessage.GAME_ID_NOT_FOUND.format(gameId));
-        }
-
-        return game;
-    }
-
     public List<RoomPlayerEntity> requireActiveRoomPlayers(String roomCode) {
         List<RoomPlayerEntity> players = roomPlayerRepository.findAllByRoomCode(roomCode);
 
@@ -110,6 +100,12 @@ public class GameLookup {
         }
 
         return players;
+    }
+
+    public RoomPlayerEntity requirePlayerBySymbol(List<RoomPlayerEntity> players, Symbol symbol) {
+        return requirePlayer(players,
+                player -> symbol.name().equals(player.getSymbol()),
+                () -> new PlayerNotFoundException(ErrorMessage.MOVING_PLAYER_SYMBOL_NOT_FOUND.format(symbol.name())));
     }
 
     public RoomPlayerEntity requireRoomPlayerEntity(List<RoomPlayerEntity> players, String playerName) {

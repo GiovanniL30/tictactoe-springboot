@@ -2,9 +2,9 @@ package com.svi.tictactoe.exception;
 
 import org.springframework.http.HttpStatus;
 
-public class GameNotCompleted extends ApiException {
+public class GameNotCompletedException extends ApiException {
 
-    public GameNotCompleted(String message) {
+    public GameNotCompletedException(String message) {
         super(message, HttpStatus.CONFLICT);
     }
 

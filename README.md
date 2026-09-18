@@ -30,7 +30,7 @@ All routes are relative to `http://localhost:8080`. Requests and responses use J
 - The room creator is player X. The second unique player is player O. Later players join as spectators.
 - Player-name comparison is case-insensitive and ignores leading and trailing spaces.
 - Timestamps are returned as ISO-8601 UTC values, for example `2026-09-16T01:30:00Z`.
-- A winning player's score increases by one. A completed draw has `winner: "DRAW"`; otherwise `winner` is the winning player's display name.
+- A winning player's score increases by one. A completed draw has `winner: null`; otherwise `winner` is the winning player's display name.
 - Empty board positions and unavailable values such as `currentTurn`, `winner`, and a spectator's `symbol` are returned as `null`.
 
 Timestamp use cases:

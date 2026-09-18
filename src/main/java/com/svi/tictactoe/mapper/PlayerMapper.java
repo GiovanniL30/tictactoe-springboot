@@ -2,12 +2,8 @@ package com.svi.tictactoe.mapper;
 
 import com.svi.tictactoe.constants.PlayerType;
 import com.svi.tictactoe.constants.Symbol;
-import com.svi.tictactoe.dto.response.game.JoinGameResponse;
-import com.svi.tictactoe.dto.response.player.PlayerGameSummaryResponse;
-import com.svi.tictactoe.dto.response.player.PlayerGamesResponse;
-import com.svi.tictactoe.dto.response.player.PlayerResponse;
-import com.svi.tictactoe.dto.response.player.PlayerSummaryResponse;
-import com.svi.tictactoe.dto.response.player.PlayersResponse;
+import com.svi.tictactoe.dto.response.room.JoinRoomResponse;
+import com.svi.tictactoe.dto.response.player.*;
 import com.svi.tictactoe.entity.PlayerCatalogEntity;
 import com.svi.tictactoe.entity.PlayerGameEntity;
 import com.svi.tictactoe.entity.RoomPlayerEntity;
@@ -22,8 +18,8 @@ public final class PlayerMapper {
     private PlayerMapper() {
     }
 
-    public static JoinGameResponse toJoinGameResponse(RoomPlayerEntity player, UUID gameId, String message) {
-        return new JoinGameResponse(message, gameId, toPlayerResponse(player));
+    public static JoinRoomResponse toJoinGameResponse(RoomPlayerEntity player, UUID gameId, String message) {
+        return new JoinRoomResponse(message, gameId, toPlayerResponse(player));
     }
 
     public static PlayerResponse toPlayerResponse(RoomPlayerEntity entity) {
@@ -37,12 +33,12 @@ public final class PlayerMapper {
     }
 
     public static PlayersResponse toPlayersResponse(List<PlayerCatalogEntity> playerCatalogEntities) {
-        List<PlayerSummaryResponse> playerSummaryResponses = playerCatalogEntities.stream()
+        List<PlayerListResponse> playerListResponse = playerCatalogEntities.stream()
                 .sorted(Comparator.comparing(PlayerCatalogEntity::getNormalizedPlayerName))
-                .map(player -> new PlayerSummaryResponse(player.getPlayerName()))
+                .map(player -> new PlayerListResponse(player.getPlayerName()))
                 .toList();
 
-        return new PlayersResponse(playerSummaryResponses.size(), playerSummaryResponses);
+        return new PlayersResponse(playerListResponse.size(), playerListResponse);
     }
 
     public static PlayerGamesResponse toPlayerGamesResponse(List<PlayerGameEntity> playerGameEntities, String playerName) {
@@ -63,7 +59,7 @@ public final class PlayerMapper {
         );
     }
 
-    public static PlayerSummary summarize(List<RoomPlayerEntity> roomPlayers) {
+    public static PlayersSummaryResponse summarize(List<RoomPlayerEntity> roomPlayers) {
         List<PlayerResponse> players = roomPlayers.stream()
                 .filter(player -> PlayerType.PLAYER.name().equals(player.getPlayerType()))
                 .sorted(Comparator.comparingInt(player -> Symbol.fromString(player.getSymbol()).ordinal()))
@@ -74,11 +70,6 @@ public final class PlayerMapper {
                 .filter(player -> PlayerType.SPECTATOR.name().equals(player.getPlayerType()))
                 .count();
 
-        return new PlayerSummary(players, spectatorCount);
-    }
-
-    public record PlayerSummary(
-            List<PlayerResponse> players,
-            int spectatorCount) {
+        return new PlayersSummaryResponse(players, spectatorCount);
     }
 }
